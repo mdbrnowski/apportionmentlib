@@ -1,6 +1,7 @@
 name = "Apportionmentlib"
 version = "0.1.0"
-keywords = ["math"]
+description = "Formalization of the Balinski-Young theorem and apportionment rules in Lean 4."
+keywords = ["math", "social choice theory"]
 defaultTargets = ["Apportionmentlib"]
 
 [leanOptions]
