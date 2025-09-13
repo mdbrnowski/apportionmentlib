@@ -40,7 +40,7 @@ def Rule : Type :=
     ∑ p ∈ election.parties, apportionment p = election.total_seats
   }
 
-/-- A rule is a quota rule if the number of seats allocated to each party `p` is either the floor
+/-- A rule is a *quota rule* if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its quota. -/
 def isQuotaRule (rule : Rule) : Prop :=
   ∀ election : Election,
@@ -49,7 +49,7 @@ def isQuotaRule (rule : Rule) : Prop :=
       let quota := (election.votes p * election.total_seats : ℚ) / (num_voters : ℚ)
       (rule election).val p = ⌊quota⌋ ∨ (rule election).val p = ⌈quota⌉
 
-/-- A rule is population monotone if population paradoxes do not occur. Population paradox is a
+/-- A rule is *population monotone* if population paradoxes do not occur. Population paradox is a
 situation where support for party `p` increases and support for party `q` decreases, but `p` loses a
 seat and `q` gains a seat. -/
 def isPopulationMonotone (rule : Rule) : Prop :=
@@ -63,12 +63,32 @@ def isPopulationMonotone (rule : Rule) : Prop :=
         ¬((rule election₁).val p > (rule election₂).val p ∧ -- p gets less seats
           (rule election₁).val q < (rule election₂).val q)  -- q gets more seats
 
+/-- A rule *preserves order* if whenever party `p` has fewer votes than party `q`, then `p` is
+allocated no more seats than `q`. -/
+def isOrderPreserving (rule : Rule) : Prop :=
+  ∀ election : Election,
+    ∀ p ∈ election.parties,
+      ∀ q ∈ election.parties,
+        election.votes p < election.votes q →
+        (rule election).val p ≤ (rule election).val q
+
+/-- If a rule is population monotone, then it preserves order. -/
+lemma if_population_monotone_then_order_preserving (rule : Rule) :
+    isPopulationMonotone rule → isOrderPreserving rule := by
+  intro h_monotone
+  unfold isPopulationMonotone at h_monotone
+  unfold isOrderPreserving
+  intro election p hp q hq h_votes
+  sorry
 
 /-- Balinski-Young theorem: If a rule is a quota rule, then it is not population monotone. Thus, no
 apportionment method can satisfy both properties simultaneously. -/
 theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonotone rule := by
   intro h_quota
+  by_contra h_population
+  have h_order := if_population_monotone_then_order_preserving rule h_population
   unfold isQuotaRule at h_quota
+  unfold isOrderPreserving at h_order
 
   let e : Election := {
     parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩},
@@ -96,7 +116,8 @@ theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonoto
     norm_num at h_b
     rcases h_b with (m_b_eq_0 | m_b_eq_1)
     · have m_a_eq_1 : (rule e).val ⟨"A"⟩ = 0 := by
-        sorry -- need another assumption
+        have m_a_le_m_b := h_order e ⟨"A"⟩ (by decide) ⟨"B"⟩ (by decide) (by decide)
+        linarith
       have : ∑ p ∈ e.parties, (rule e).val p ≤ 7 := by
         simp [e]
         linarith [m_a_eq_1, m_b_eq_0, m_c_le_2, m_d_le_5]
@@ -117,13 +138,27 @@ theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonoto
   }
   have m_d_ge_6' : (rule e').val ⟨"D"⟩ ≥ 6 := by
     have h_d' := h_quota e' ⟨"D"⟩ (by decide)
-    simp [e', Election.total_voters] at h_d'
+    simp [e'] at h_d'
     norm_num at h_d'
     grind
   have m_b_eq_0' : (rule e').val ⟨"B"⟩ = 0 := by
-    sorry
-
-  by_contra h_population
+    have h_b' := h_quota e' ⟨"B"⟩ (by decide)
+    simp [e'] at h_b'
+    norm_num at h_b'
+    rcases h_b' with (m_b_eq_0' | m_b_eq_1')
+    · assumption
+    · have m_a_ge_1' : (rule e').val ⟨"A"⟩ ≥ 1 := by
+        have m_b_ge_m_a' := h_order e' ⟨"B"⟩ (by decide) ⟨"A"⟩ (by decide) (by decide)
+        linarith
+      have m_c_ge_1' : (rule e').val ⟨"C"⟩ ≥ 1 := by
+        have m_c_ge_m_b' := h_order e' ⟨"B"⟩ (by decide) ⟨"C"⟩ (by decide) (by decide)
+        linarith
+      have : ∑ p ∈ e'.parties, (rule e').val p ≥ 9 := by
+        simp [e']
+        linarith [m_a_ge_1', m_b_eq_1', m_c_ge_1', m_d_ge_6']
+      have : ∑ p ∈ e'.parties, (rule e').val p = 8 := by
+        exact (rule e').property
+      linarith
   replace h_population := h_population e e' (by decide)
   have h_bd := h_population ⟨"B"⟩ (by decide) ⟨"D"⟩ (by decide)
   grind
