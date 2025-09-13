@@ -35,7 +35,10 @@ def Election.total_voters (election : Election) : ℕ :=
   ∑ p ∈ election.parties, election.votes p
 
 def Apportionment : Type := Party -> ℕ
-def Rule : Type := Election -> Apportionment
+def Rule : Type :=
+  (election : Election) → {apportionment : Apportionment //
+    ∑ p ∈ election.parties, apportionment p = election.total_seats
+  }
 
 /-- A rule is a quota rule if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its quota. -/
@@ -44,7 +47,7 @@ def isQuotaRule (rule : Rule) : Prop :=
     let num_voters := election.total_voters
     ∀ p ∈ election.parties,
       let quota := (election.votes p * election.total_seats : ℚ) / (num_voters : ℚ)
-      rule election p = ⌊quota⌋ ∨ rule election p = ⌈quota⌉
+      (rule election).val p = ⌊quota⌋ ∨ (rule election).val p = ⌈quota⌉
 
 /-- A rule is population monotone if population paradoxes do not occur. Population paradox is a
 situation where support for party `p` increases and support for party `q` decreases, but `p` loses a
@@ -57,8 +60,8 @@ def isPopulationMonotone (rule : Rule) : Prop :=
       ∀ q ∈ election₁.parties,
         election₁.votes p < election₂.votes p ∧ -- p get more votes
         election₁.votes q > election₂.votes q → -- q get less votes
-        ¬(rule election₁ p > rule election₂ p ∧ -- p gets less seats
-          rule election₁ q < rule election₂ q)  -- q gets more seats
+        ¬((rule election₁).val p > (rule election₂).val p ∧ -- p gets less seats
+          (rule election₁).val q < (rule election₂).val q)  -- q gets more seats
 
 
 /-- Balinski-Young theorem: If a rule is a quota rule, then it is not population monotone. Thus, no
@@ -77,26 +80,29 @@ theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonoto
       | _ => 0
     total_seats := 8
   }
-  have m_c_le_2 : rule e ⟨"C"⟩ ≤ 2 := by
+  have m_c_le_2 : (rule e).val ⟨"C"⟩ ≤ 2 := by
     have h_c := h_quota e ⟨"C"⟩ (by decide)
     simp [e] at h_c
     norm_num at h_c
     grind
-  have m_d_le_5 : rule e ⟨"D"⟩ ≤ 5 := by
+  have m_d_le_5 : (rule e).val ⟨"D"⟩ ≤ 5 := by
     have h_d := h_quota e ⟨"D"⟩ (by decide)
     simp [e] at h_d
     norm_num at h_d
     grind
-  have m_b_eq_1 : rule e ⟨"B"⟩ = 1 := by
+  have m_b_eq_1 : (rule e).val ⟨"B"⟩ = 1 := by
     have h_b := h_quota e ⟨"B"⟩ (by decide)
     simp [e] at h_b
     norm_num at h_b
     rcases h_b with (m_b_eq_0 | m_b_eq_1)
-    · have m_a_eq_1 : rule e ⟨"A"⟩ = 0 := by
+    · have m_a_eq_1 : (rule e).val ⟨"A"⟩ = 0 := by
         sorry -- need another assumption
-      have : ∑ p ∈ e.parties, rule e p ≤ 7 := by
-        grind
-      sorry -- contradiction with total_seats := 8
+      have : ∑ p ∈ e.parties, (rule e).val p ≤ 7 := by
+        simp [e]
+        linarith [m_a_eq_1, m_b_eq_0, m_c_le_2, m_d_le_5]
+      have : ∑ p ∈ e.parties, (rule e).val p = 8 := by
+        exact (rule e).property
+      linarith
     · assumption
 
   let e' : Election := {
@@ -109,12 +115,12 @@ theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonoto
       | _ => 0
     total_seats := 8
   }
-  have m_d_ge_6' : rule e' ⟨"D"⟩ ≥ 6 := by
+  have m_d_ge_6' : (rule e').val ⟨"D"⟩ ≥ 6 := by
     have h_d' := h_quota e' ⟨"D"⟩ (by decide)
     simp [e', Election.total_voters] at h_d'
     norm_num at h_d'
     grind
-  have m_b_eq_0' : rule e' ⟨"B"⟩ = 0 := by
+  have m_b_eq_0' : (rule e').val ⟨"B"⟩ = 0 := by
     sorry
 
   by_contra h_population
