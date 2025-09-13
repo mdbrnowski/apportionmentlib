@@ -39,30 +39,35 @@ def Rule : Type := Election -> Apportionment
 
 /-- A rule is a quota rule if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its quota. -/
-def is_quota_rule (rule : Rule) : Prop :=
+def isQuotaRule (rule : Rule) : Prop :=
   ∀ election : Election,
     let num_voters := election.total_voters
     ∀ p ∈ election.parties,
       let quota := (election.votes p * election.total_seats : ℚ) / (num_voters : ℚ)
       rule election p = ⌊quota⌋ ∨ rule election p = ⌈quota⌉
 
-/-- A rule is population monotone if when the number of votes for a party `p` increases, but the
-total number of votes remains the same, then the number of seats allocated to `p` does not decrease.
--/
-def is_population_monotone (rule : Rule) : Prop :=
+/-- A rule is population monotone if population paradoxes do not occur. Population paradox is a
+situation where support for party `p` increases and support for party `q` decreases, but `p` loses a
+seat and `q` gains a seat. -/
+def isPopulationMonotone (rule : Rule) : Prop :=
   ∀ election₁ election₂ : Election,
     election₁.parties = election₂.parties ∧
-    election₁.total_seats = election₂.total_seats ∧
-    election₁.total_voters = election₂.total_voters →
+    election₁.total_seats = election₂.total_seats →
     ∀ p ∈ election₁.parties,
-      election₁.votes p < election₂.votes p →
-      rule election₁ p ≤ rule election₂ p
+      ∀ q ∈ election₁.parties,
+        election₁.votes p < election₂.votes p ∧ -- p get more votes
+        election₁.votes q > election₂.votes q → -- q get less votes
+        ¬(rule election₁ p > rule election₂ p ∧ -- p gets less seats
+          rule election₁ q < rule election₂ q)  -- q gets more seats
 
 
-theorem balinski_young (rule : Rule) : is_quota_rule rule → ¬ is_population_monotone rule := by
+/-- Balinski-Young theorem: If a rule is a quota rule, then it is not population monotone. Thus, no
+apportionment method can satisfy both properties simultaneously. -/
+theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonotone rule := by
   intro h_quota
+  unfold isQuotaRule at h_quota
 
-  let e₁ : Election := {
+  let e : Election := {
     parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩},
     votes := fun
       | ⟨"A"⟩ => 660
@@ -72,29 +77,47 @@ theorem balinski_young (rule : Rule) : is_quota_rule rule → ¬ is_population_m
       | _ => 0
     total_seats := 8
   }
-  replace h_quota := h_quota e₁
-  unfold is_quota_rule at h_quota
-  have m_c_le_2 : rule e₁ ⟨"C"⟩ ≤ 2 := by
-    have h_c := h_quota ⟨"C"⟩ (by decide)
-    simp [e₁] at h_c
+  have m_c_le_2 : rule e ⟨"C"⟩ ≤ 2 := by
+    have h_c := h_quota e ⟨"C"⟩ (by decide)
+    simp [e] at h_c
     norm_num at h_c
     grind
-  have m_d_le_5 : rule e₁ ⟨"D"⟩ ≤ 5 := by
-    have h_d := h_quota ⟨"D"⟩ (by decide)
-    simp [e₁] at h_d
+  have m_d_le_5 : rule e ⟨"D"⟩ ≤ 5 := by
+    have h_d := h_quota e ⟨"D"⟩ (by decide)
+    simp [e] at h_d
     norm_num at h_d
     grind
-  have m_b_eq_1 : rule e₁ ⟨"B"⟩ = 1 := by
-    have h_b := h_quota ⟨"B"⟩ (by decide)
-    simp [e₁] at h_b
+  have m_b_eq_1 : rule e ⟨"B"⟩ = 1 := by
+    have h_b := h_quota e ⟨"B"⟩ (by decide)
+    simp [e] at h_b
     norm_num at h_b
     rcases h_b with (m_b_eq_0 | m_b_eq_1)
-    · have m_a_eq_1 : rule e₁ ⟨"A"⟩ = 0 := by
+    · have m_a_eq_1 : rule e ⟨"A"⟩ = 0 := by
         sorry -- need another assumption
-      have : ∑ p ∈ e₁.parties, rule e₁ p ≤ 7 := by
+      have : ∑ p ∈ e.parties, rule e p ≤ 7 := by
         grind
       sorry -- contradiction with total_seats := 8
     · assumption
 
-  -- let e₂ =
-  sorry
+  let e' : Election := {
+    parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩},
+    votes := fun
+      | ⟨"A"⟩ => 680
+      | ⟨"B"⟩ => 675
+      | ⟨"C"⟩ => 700
+      | ⟨"D"⟩ => 6200
+      | _ => 0
+    total_seats := 8
+  }
+  have m_d_ge_6' : rule e' ⟨"D"⟩ ≥ 6 := by
+    have h_d' := h_quota e' ⟨"D"⟩ (by decide)
+    simp [e', Election.total_voters] at h_d'
+    norm_num at h_d'
+    grind
+  have m_b_eq_0' : rule e' ⟨"B"⟩ = 0 := by
+    sorry
+
+  by_contra h_population
+  replace h_population := h_population e e' (by decide)
+  have h_bd := h_population ⟨"B"⟩ (by decide) ⟨"D"⟩ (by decide)
+  grind
