@@ -16,9 +16,6 @@ structure Party where
   name : String
   deriving DecidableEq, Inhabited
 
-instance : ToString Party where
-  toString p := p.name
-
 instance : Repr Party where
   reprPrec p _ := s!"{p.name} : Party"
 
@@ -75,21 +72,21 @@ def isPopulationMonotone (rule : Rule) : Prop :=
         ¬((rule election₁).val p > (rule election₂).val p ∧ -- p gets less seats
           (rule election₁).val q < (rule election₂).val q)  -- q gets more seats
 
-/-- A rule *preserves order* if whenever party `p` has fewer votes than party `q`, then `p` is
+/-- A rule is *concordant* if whenever party `p` has fewer votes than party `q`, then `p` is
 allocated no more seats than `q`. -/
-def isOrderPreserving (rule : Rule) : Prop :=
+def isConcordant (rule : Rule) : Prop :=
   ∀ election : Election,
     ∀ p ∈ election.parties,
       ∀ q ∈ election.parties,
         election.votes p < election.votes q →
         (rule election).val p ≤ (rule election).val q
 
-/-- If an anonymous rule is population monotone, then it preserves order. -/
-lemma if_population_monotone_then_order_preserving (rule : Rule) (h_anonymous : isAnonymous rule) :
-    isPopulationMonotone rule → isOrderPreserving rule := by
+/-- If an anonymous rule is population monotone, then it is concordant. -/
+lemma if_population_monotone_then_concordant (rule : Rule) (h_anonymous : isAnonymous rule) :
+    isPopulationMonotone rule → isConcordant rule := by
   intro h_monotone
   unfold isPopulationMonotone at h_monotone
-  unfold isOrderPreserving
+  unfold isConcordant
   intro e p hp q hq h_votes
 
   let σ := fun r => -- switch parties p and q
@@ -113,9 +110,9 @@ theorem balinski_young (rule : Rule) (h_anonymous : isAnonymous rule) : isQuotaR
     ¬isPopulationMonotone rule := by
   intro h_quota
   by_contra h_population
-  have h_order := if_population_monotone_then_order_preserving rule h_anonymous h_population
+  have h_concord := if_population_monotone_then_concordant rule h_anonymous h_population
   unfold isQuotaRule at h_quota
-  unfold isOrderPreserving at h_order
+  unfold isConcordant at h_concord
 
   let e : Election := {
     parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩}
@@ -143,7 +140,7 @@ theorem balinski_young (rule : Rule) (h_anonymous : isAnonymous rule) : isQuotaR
     norm_num at h_b
     rcases h_b with (m_b_eq_0 | m_b_eq_1)
     · have m_a_eq_1 : (rule e).val ⟨"A"⟩ = 0 := by
-        have m_a_le_m_b := h_order e ⟨"A"⟩ (by decide) ⟨"B"⟩ (by decide) (by decide)
+        have m_a_le_m_b := h_concord e ⟨"A"⟩ (by decide) ⟨"B"⟩ (by decide) (by decide)
         linarith
       have : ∑ p ∈ e.parties, (rule e).val p ≤ 7 := by
         simp [e]
@@ -175,10 +172,10 @@ theorem balinski_young (rule : Rule) (h_anonymous : isAnonymous rule) : isQuotaR
     rcases h_b' with (m_b_eq_0' | m_b_eq_1')
     · assumption
     · have m_a_ge_1' : (rule e').val ⟨"A"⟩ ≥ 1 := by
-        have m_b_ge_m_a' := h_order e' ⟨"B"⟩ (by decide) ⟨"A"⟩ (by decide) (by decide)
+        have m_b_ge_m_a' := h_concord e' ⟨"B"⟩ (by decide) ⟨"A"⟩ (by decide) (by decide)
         linarith
       have m_c_ge_1' : (rule e').val ⟨"C"⟩ ≥ 1 := by
-        have m_c_ge_m_b' := h_order e' ⟨"B"⟩ (by decide) ⟨"C"⟩ (by decide) (by decide)
+        have m_c_ge_m_b' := h_concord e' ⟨"B"⟩ (by decide) ⟨"C"⟩ (by decide) (by decide)
         linarith
       have : ∑ p ∈ e'.parties, (rule e').val p ≥ 9 := by
         simp [e']
