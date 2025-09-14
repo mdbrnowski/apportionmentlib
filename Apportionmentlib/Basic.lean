@@ -83,10 +83,8 @@ def isConcordant (rule : Rule) : Prop :=
         rule.res election p ≤ rule.res election q
 
 /-- If a rule is population monotone, then it is concordant. -/
-lemma if_population_monotone_then_concordant (rule : Rule) :
-    isPopulationMonotone rule → isConcordant rule := by
-  intro h_monotone
-  unfold isPopulationMonotone at h_monotone
+lemma if_population_monotone_then_concordant (rule : Rule) (h_monotone : isPopulationMonotone rule)
+    : isConcordant rule := by
   unfold isConcordant
   intro e p hp q hq h_votes
 
@@ -100,6 +98,7 @@ lemma if_population_monotone_then_concordant (rule : Rule) :
     votes := fun p ↦ e.votes (σ p)
     house_size := e.house_size
   }
+  unfold isPopulationMonotone at h_monotone
   specialize h_monotone e e' (by trivial) p hp q hq (by grind)
   simp only [not_and_or, not_lt] at h_monotone
   have h_anonym := rule.anonymous e σ (by grind) (by grind)
@@ -107,9 +106,8 @@ lemma if_population_monotone_then_concordant (rule : Rule) :
 
 /-- Balinski-Young impossibility theorem: If a rule is a quota rule, then it is not population
 monotone. Thus, no apportionment method can satisfy both properties simultaneously. -/
-theorem balinski_young (rule : Rule) : isQuotaRule rule →
+theorem balinski_young (rule : Rule) (h_quota : isQuotaRule rule) :
     ¬isPopulationMonotone rule := by
-  intro h_quota
   by_contra h_population
   have h_concord := if_population_monotone_then_concordant rule h_population
   unfold isQuotaRule at h_quota
