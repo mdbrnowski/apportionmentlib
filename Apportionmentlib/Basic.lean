@@ -40,6 +40,18 @@ def Rule : Type :=
     ∑ p ∈ election.parties, apportionment p = election.total_seats
   }
 
+/-- A rule is *anonymous* if every permutation of vote counts for parties results in the same
+permutation of the seat allocation. In other words, the names of the parties do not matter. -/
+def isAnonymous (rule : Rule) : Prop :=
+  ∀ election : Election,
+    ∀ σ : Party → Party,
+      (∀ p ∈ election.parties, σ p ∈ election.parties) →
+      (∀ p ∈ election.parties, ∀ q ∈ election.parties, σ p = σ q → p = q) →
+      (rule { parties := election.parties,
+              votes := fun p => election.votes (σ p),
+              total_seats := election.total_seats
+            }).val = fun p => (rule election).val (σ p)
+
 /-- A rule is a *quota rule* if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its quota. -/
 def isQuotaRule (rule : Rule) : Prop :=
@@ -72,26 +84,41 @@ def isOrderPreserving (rule : Rule) : Prop :=
         election.votes p < election.votes q →
         (rule election).val p ≤ (rule election).val q
 
-/-- If a rule is population monotone, then it preserves order. -/
-lemma if_population_monotone_then_order_preserving (rule : Rule) :
+/-- If an anonymous rule is population monotone, then it preserves order. -/
+lemma if_population_monotone_then_order_preserving (rule : Rule) (h_anonymous : isAnonymous rule) :
     isPopulationMonotone rule → isOrderPreserving rule := by
   intro h_monotone
   unfold isPopulationMonotone at h_monotone
   unfold isOrderPreserving
-  intro election p hp q hq h_votes
-  sorry
+  intro e p hp q hq h_votes
 
-/-- Balinski-Young theorem: If a rule is a quota rule, then it is not population monotone. Thus, no
-apportionment method can satisfy both properties simultaneously. -/
-theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonotone rule := by
+  let σ := fun r => -- switch parties p and q
+    if r = p then q
+    else if r = q then p
+    else r
+
+  set e' : Election := {
+    parties := e.parties
+    votes := fun p ↦ e.votes (σ p)
+    total_seats := e.total_seats
+  }
+  specialize h_monotone e e' (by trivial) p hp q hq (by grind)
+  simp only [not_and_or, not_lt] at h_monotone
+  specialize h_anonymous e σ (by grind) (by grind)
+  grind
+
+/-- Balinski-Young theorem: If an anonymous rule is a quota rule, then it is not population
+monotone. Thus, no apportionment method can satisfy both properties simultaneously. -/
+theorem balinski_young (rule : Rule) (h_anonymous : isAnonymous rule) : isQuotaRule rule →
+    ¬isPopulationMonotone rule := by
   intro h_quota
   by_contra h_population
-  have h_order := if_population_monotone_then_order_preserving rule h_population
+  have h_order := if_population_monotone_then_order_preserving rule h_anonymous h_population
   unfold isQuotaRule at h_quota
   unfold isOrderPreserving at h_order
 
   let e : Election := {
-    parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩},
+    parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩}
     votes := fun
       | ⟨"A"⟩ => 660
       | ⟨"B"⟩ => 670
@@ -127,7 +154,7 @@ theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonoto
     · assumption
 
   let e' : Election := {
-    parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩},
+    parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩}
     votes := fun
       | ⟨"A"⟩ => 680
       | ⟨"B"⟩ => 675
