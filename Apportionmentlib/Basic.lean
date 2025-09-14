@@ -159,6 +159,6 @@ theorem balinski_young (rule : Rule) : isQuotaRule rule → ¬isPopulationMonoto
       have : ∑ p ∈ e'.parties, (rule e').val p = 8 := by
         exact (rule e').property
       linarith
-  replace h_population := h_population e e' (by decide)
+  specialize h_population e e' (by decide)
   have h_bd := h_population ⟨"B"⟩ (by decide) ⟨"D"⟩ (by decide)
   grind
