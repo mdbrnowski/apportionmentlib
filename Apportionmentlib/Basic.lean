@@ -79,28 +79,27 @@ structure Rule where
 /-- A rule is *anonymous* if permuting the votes of the parties permutes the allocation of seats in
 the same way. Informally, the names of the parties do not matter. -/
 class IsAnonymous (rule : Rule) : Prop where
-  anonymous : ∀ election : Election, ∀ σ : Party → Party,
+  anonymous (election : Election) (σ : Party → Party) :
     ∀ p ∈ election.parties, σ p ∈ election.parties →
-      ∀ p ∈ election.parties, ∀ q ∈ election.parties, σ p = σ q → p = q →
+      ∀ q ∈ election.parties, (σ p = σ q → p = q) →
         rule.res { parties := election.parties,
-                   votes := fun p => election.votes (σ p),
+                   votes := fun x => election.votes (σ x),
                    house_size := election.house_size
-                 } = fun p => rule.res election (σ p)
+                 } = fun x => rule.res election (σ x)
 
 /-- A rule is a *quota rule* if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its Hare-quota. -/
 class IsQuotaRule (rule : Rule) : Prop where
-  quota_rule : ∀ election : Election,
-    let num_voters := election.total_voters
+  quota_rule (election : Election) :
     ∀ p ∈ election.parties,
-      let quota := (election.votes p * election.house_size : ℚ) / (num_voters : ℚ)
+      let quota := (election.votes p * election.house_size : ℚ) / (election.total_voters : ℚ)
       rule.res election p = ⌊quota⌋ ∨ rule.res election p = ⌈quota⌉
 
 /-- A rule is *population monotone* (or *vote ratio monotone*) if population paradoxes do not occur.
 Population paradox is a situation where support for party `p` increases and support for party `q`
 decreases, but `p` loses a seat and `q` gains a seat. -/
 class IsPopulationMonotone (rule : Rule) : Prop where
-  population_monotonone : ∀ election₁ election₂ : Election,
+  population_monotonone (election₁ election₂ : Election) :
     election₁.parties = election₂.parties ∧ election₁.house_size = election₂.house_size →
       ∀ p ∈ election₁.parties, ∀ q ∈ election₁.parties,
         election₁.votes p < election₂.votes p ∧ -- p get more votes
@@ -111,7 +110,7 @@ class IsPopulationMonotone (rule : Rule) : Prop where
 /-- A rule is *concordant* if whenever party `p` has fewer votes than party `q`, then `p` is
 allocated no more seats than `q`. -/
 class IsConcordant (rule : Rule) : Prop where
-  concordant : ∀ election : Election,
+  concordant (election : Election) :
     ∀ p ∈ election.parties, ∀ q ∈ election.parties,
       election.votes p < election.votes q →
         rule.res election p ≤ rule.res election q
