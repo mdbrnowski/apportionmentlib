@@ -16,8 +16,7 @@ We define basic notions related to apportionment methods, such as elections, app
 apportionment rules, and properties of apportionment rules. We also prove the Balinski-Young
 impossibility theorem.
 
-Almost all definitions strictly follow the definitions given in the book by Pukelsheim
-[Pukelsheim2017].
+All definitions follow those given in a textbook by F. Pukelsheim [Pukelsheim2017].
 
 ## Main definitions
 
@@ -38,7 +37,10 @@ Almost all definitions strictly follow the definitions given in the book by Puke
 
 ## References
 
-* [F. Pukelsheim, *Proportional Representation*][Pukelsheim2017]
+* [F. Pukelsheim, *Proportional Representation: Apportionment Methods and Their Applications*
+  ][Pukelsheim2017]
+* [M. L. Balinski, H. P. Young, *Fair Representation: Meeting the Ideal of One Man, One Vote*
+  ][BalinskiYoung1982]
 
 -/
 
