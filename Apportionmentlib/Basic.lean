@@ -9,6 +9,39 @@ import Mathlib.Data.Rat.Init
 import Mathlib.Data.Rat.Floor
 import Mathlib.Tactic.NormNum
 
+/-!
+# Basic
+
+We define basic notions related to apportionment methods, such as elections, apportionments,
+apportionment rules, and properties of apportionment rules. We also prove the Balinski-Young
+impossibility theorem.
+
+Almost all definitions strictly follow the definitions given in the book by Pukelsheim
+[Pukelsheim2017].
+
+## Main definitions
+
+* `Party`
+* `Election`
+* `Apportionment`
+* `Rule`
+* `IsAnonymous`
+* `IsQuotaRule`
+* `IsPopulationMonotone`
+* `IsConcordant`
+
+## Main statements
+
+* `if_IsPopulationMonotone_then_IsConcordant`: anonymity and population monotonicity imply
+  concordance.
+* `balinski_young`: Balinski-Young impossibility theorem.
+
+## References
+
+* [F. Pukelsheim, *Proportional Representation*][Pukelsheim2017]
+
+-/
+
 open BigOperators
 
 /-- Party (or candidate, state, etc.) in an election. They are identified by their name. -/
@@ -83,11 +116,11 @@ class IsConcordant (rule : Rule) : Prop where
 
 /-- If an anonymous rule is population monotone, then it is concordant. -/
 lemma if_IsPopulationMonotone_then_IsConcordant (rule : Rule) [h_anon : IsAnonymous rule]
-    [h_monotone : IsPopulationMonotone rule] : IsConcordant rule := by
+    [h_mono : IsPopulationMonotone rule] : IsConcordant rule := by
   constructor
   intro e p hp q hq h_votes
 
-  let σ := fun r => -- switch parties p and q
+  let σ := fun r => -- swap parties p and q
     if r = p then q
     else if r = q then p
     else r
@@ -98,7 +131,7 @@ lemma if_IsPopulationMonotone_then_IsConcordant (rule : Rule) [h_anon : IsAnonym
     house_size := e.house_size
   }
 
-  replace h_mono := h_monotone.population_monotonone e e' (by trivial) p hp q hq (by grind)
+  replace h_mono := h_mono.population_monotonone e e' (by trivial) p hp q hq (by grind)
   replace h_anon := h_anon.anonymous e σ
   grind only [cases Or]
 
