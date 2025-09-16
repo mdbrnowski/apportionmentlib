@@ -14,6 +14,7 @@ maxSynthPendingDepth = 3
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
+rev = "stable"
 
 [[lean_lib]]
 name = "Apportionmentlib"
