@@ -5,6 +5,7 @@ Authors: Michał Dobranowski
 -/
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Nat.Dist
 import Mathlib.Data.Rat.Init
 import Mathlib.Data.Rat.Floor
 import Mathlib.Tactic.NormNum
@@ -25,9 +26,10 @@ All definitions follow those given in a textbook by F. Pukelsheim [Pukelsheim201
 * `Apportionment`
 * `Rule`
 * `IsAnonymous`
+* `IsBalanced`
+* `IsConcordant`
 * `IsQuotaRule`
 * `IsPopulationMonotone`
-* `IsConcordant`
 
 ## Main statements
 
@@ -80,7 +82,9 @@ the property called *house size feasibility*, i.e., the total number of seats al
 the house size. -/
 structure Rule where
   res : Election → Apportionment
-  house_size_feasibility : ∀ election : Election,
+  inheritance_of_zeros (election : Election) (p : Party) :
+    election.votes p = 0 → res election p = 0
+  house_size_feasibility (election : Election) :
     ∑ p ∈ election.parties, res election p = election.house_size
 
 /-- A rule is *anonymous* if permuting the votes of the parties permutes the allocation of seats in
@@ -92,6 +96,20 @@ class IsAnonymous (rule : Rule) : Prop where
                   votes := fun x => election.votes (σ x),
                   house_size := election.house_size
                 } = fun x => rule.res election (σ x)
+
+/-- A rule is *balanced* if whenever two parties `p` and `q` have the same number of votes, then
+the difference in the number of seats allocated to them is at most one. -/
+class IsBalanced (rule : Rule) : Prop where
+  balanced (election : Election) (p q : Party) :
+    election.votes p = election.votes q →
+      (rule.res election p).dist (rule.res election q) ≤ 1
+
+/-- A rule is *concordant* if whenever party `p` has fewer votes than party `q`, then `p` is
+allocated no more seats than `q`. -/
+class IsConcordant (rule : Rule) : Prop where
+  concordant (election : Election) (p q : Party) :
+    election.votes p < election.votes q →
+      rule.res election p ≤ rule.res election q
 
 /-- A rule is a *quota rule* if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its Hare-quota. -/
@@ -110,13 +128,6 @@ class IsPopulationMonotone (rule : Rule) : Prop where
       election₂.votes p * election₁.votes q > election₂.votes q * election₁.votes p →
         ¬(rule.res election₁ p > rule.res election₂ p ∧ -- p gets less seats
           rule.res election₁ q < rule.res election₂ q)  -- q gets more seats
-
-/-- A rule is *concordant* if whenever party `p` has fewer votes than party `q`, then `p` is
-allocated no more seats than `q`. -/
-class IsConcordant (rule : Rule) : Prop where
-  concordant (election : Election) (p q : Party) :
-    election.votes p < election.votes q →
-      rule.res election p ≤ rule.res election q
 
 /-- If an anonymous rule is population monotone, then it is concordant. -/
 lemma if_IsPopulationMonotone_then_IsConcordant (rule : Rule) [h_anon : IsAnonymous rule]
