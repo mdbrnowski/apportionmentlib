@@ -101,13 +101,13 @@ class IsQuotaRule (rule : Rule) : Prop where
     rule.res election p = ⌊quota⌋ ∨ rule.res election p = ⌈quota⌉
 
 /-- A rule is *population monotone* (or *vote ratio monotone*) if population paradoxes do not occur.
-Population paradox is a situation where support for party `p` increases and support for party `q`
-decreases, but `p` loses a seat and `q` gains a seat. -/
+A population paradox occurs when the support for party `p` increases at a faster rate than that for
+party `q`, but `p` loses seats while `q` gains seats. -/
 class IsPopulationMonotone (rule : Rule) : Prop where
   population_monotonone (election₁ election₂ : Election) (p q : Party) :
     election₁.parties = election₂.parties ∧ election₁.house_size = election₂.house_size →
-      election₁.votes p < election₂.votes p ∧ -- p get more votes
-      election₁.votes q > election₂.votes q → -- q get less votes
+      -- p' support grows faster than q's (multiplying crosswise to avoid ℚ)
+      election₂.votes p * election₁.votes q > election₂.votes q * election₁.votes p →
         ¬(rule.res election₁ p > rule.res election₂ p ∧ -- p gets less seats
           rule.res election₁ q < rule.res election₂ q)  -- q gets more seats
 
@@ -134,10 +134,13 @@ lemma if_IsPopulationMonotone_then_IsConcordant (rule : Rule) [h_anon : IsAnonym
     votes := fun p ↦ e.votes (σ p)
     house_size := e.house_size
   }
-
-  replace h_mono := h_mono.population_monotonone e e' p q (by trivial) (by grind)
-  replace h_anon := h_anon.anonymous e σ p q
-  grind only [cases Or]
+  replace h_mono := h_mono.population_monotonone e e' p q (by trivial)
+  replace h_anon := h_anon.anonymous e σ p q (by grind)
+  have h_p' : e'.votes p = e.votes q := by grind
+  have h_q' : e'.votes q = e.votes p := by grind
+  rw [h_p', h_q', ←pow_two, ←pow_two] at h_mono
+  specialize h_mono (Nat.pow_lt_pow_left h_votes (by decide))
+  grind
 
 /-- Balinski-Young impossibility theorem: If an anonymous rule is a quota rule, then it is not
 population monotone. Thus, no apportionment method can satisfy both properties simultaneously. -/
@@ -182,6 +185,8 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
       linarith
     · assumption
 
+  -- We give an even stronger counterexample than needed: not only does B's support increase at a
+  -- faster rate than D's, but D's support decreases while B's support increases.
   let e' : Election := {
     parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩}
     votes := fun
