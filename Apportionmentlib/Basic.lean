@@ -63,6 +63,8 @@ structure Party where
 instance : Repr Party where
   reprPrec p _ := s!"{p.name} : Party"
 
+variable [Fintype Party]
+
 /-- An election with a finite set of parties, a function giving the number of votes for each party,
 and the total number of seats to be allocated. -/
 structure Election where
@@ -75,48 +77,56 @@ def Election.total_voters (election : Election) : ℕ :=
   ∑ p ∈ election.parties, election.votes p
 
 /-- An apportionment is a function from parties to the number of seats allocated to each party. -/
-def Apportionment : Type := Party → ℕ
+abbrev Apportionment : Type := Party → ℕ
 
-/-- An apportionment rule is a function that, given an election, returns an apportionment satisfying
-the property called *house size feasibility*, i.e., the total number of seats allocated is equal to
-the house size. -/
+/-- An apportionment rule is a function that, given an election, returns a set of apportionments
+satisfying three properties:
+1. *Non-emptiness*: there is at least one apportionment returned;
+2. *Inheritance of zeros*: parties with zero votes are allocated zero seats;
+3. *House size feasibility*: the total number of seats allocated is equal to the house size. -/
 structure Rule where
-  res : Election → Apportionment
+  res : Election → Finset Apportionment
+  non_emptiness (election : Election) : (res election).Nonempty
   inheritance_of_zeros (election : Election) (p : Party) :
-    election.votes p = 0 → res election p = 0
+    election.votes p = 0 → ∀ App ∈ res election, App p = 0
   house_size_feasibility (election : Election) :
-    ∑ p ∈ election.parties, res election p = election.house_size
+    ∀ App ∈ res election,
+      ∑ p ∈ election.parties, App p = election.house_size
 
 /-- A rule is *anonymous* if permuting the votes of the parties permutes the allocation of seats in
 the same way. Informally, the names of the parties do not matter. -/
 class IsAnonymous (rule : Rule) : Prop where
   anonymous (election : Election) (σ : Party → Party) (p q : Party) :
     (σ p = σ q → p = q) →
-      rule.res { parties := election.parties,
-                  votes := fun x => election.votes (σ x),
-                  house_size := election.house_size
-                } = fun x => rule.res election (σ x)
+      let election' : Election := { parties := election.parties,
+                                    votes := election.votes ∘ σ,
+                                    house_size := election.house_size
+                                  }
+      rule.res election' = (rule.res election).image (· ∘ σ)
 
 /-- A rule is *balanced* if whenever two parties `p` and `q` have the same number of votes, then
 the difference in the number of seats allocated to them is at most one. -/
 class IsBalanced (rule : Rule) : Prop where
   balanced (election : Election) (p q : Party) :
     election.votes p = election.votes q →
-      (rule.res election p).dist (rule.res election q) ≤ 1
+      ∀ App ∈ rule.res election,
+        (App p).dist (App q) ≤ 1
 
 /-- A rule is *concordant* if whenever party `p` has fewer votes than party `q`, then `p` is
 allocated no more seats than `q`. -/
 class IsConcordant (rule : Rule) : Prop where
   concordant (election : Election) (p q : Party) :
     election.votes p < election.votes q →
-      rule.res election p ≤ rule.res election q
+      ∀ App ∈ rule.res election,
+        App p ≤ App q
 
 /-- A rule is a *quota rule* if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its Hare-quota. -/
 class IsQuotaRule (rule : Rule) : Prop where
   quota_rule (election : Election) (p : Party) :
     let quota := (election.votes p * election.house_size : ℚ) / (election.total_voters : ℚ)
-    rule.res election p = ⌊quota⌋ ∨ rule.res election p = ⌈quota⌉
+    ∀ App ∈ rule.res election,
+      App p = ⌊quota⌋ ∨ App p = ⌈quota⌉
 
 /-- A rule is *population monotone* (or *vote ratio monotone*) if population paradoxes do not occur.
 A population paradox occurs when the support for party `p` increases at a faster rate than that for
@@ -126,31 +136,33 @@ class IsPopulationMonotone (rule : Rule) : Prop where
     election₁.parties = election₂.parties ∧ election₁.house_size = election₂.house_size →
       -- p' support grows faster than q's (multiplying crosswise to avoid ℚ)
       election₂.votes p * election₁.votes q > election₂.votes q * election₁.votes p →
-        ¬(rule.res election₁ p > rule.res election₂ p ∧ -- p gets less seats
-          rule.res election₁ q < rule.res election₂ q)  -- q gets more seats
+        ∀ App₁ ∈ rule.res election₁, ∀ App₂ ∈ rule.res election₂,
+          ¬(App₁ p > App₂ p ∧ App₁ q < App₂ q)  -- p gets less seats, q gets more seats
 
 /-- If an anonymous rule is population monotone, then it is concordant. -/
 lemma if_IsPopulationMonotone_then_IsConcordant (rule : Rule) [h_anon : IsAnonymous rule]
     [h_mono : IsPopulationMonotone rule] : IsConcordant rule := by
   constructor
-  intro e p q h_votes
+  intro e p q h_votes App h_App
 
-  let σ := fun r => -- swap parties p and q
+  let σ := fun r ↦ -- swap parties p and q
     if r = p then q
     else if r = q then p
     else r
 
   set e' : Election := {
     parties := e.parties
-    votes := fun p ↦ e.votes (σ p)
+    votes := e.votes ∘ σ
     house_size := e.house_size
   }
-  replace h_mono := h_mono.population_monotonone e e' p q (by trivial)
+  let App' := App ∘ σ
   replace h_anon := h_anon.anonymous e σ p q (by grind)
+  replace h_mono := h_mono.population_monotonone e e' p q (by trivial)
+  have h_App' : App' ∈ rule.res e' := by grind
   have h_p' : e'.votes p = e.votes q := by grind
   have h_q' : e'.votes q = e.votes p := by grind
   rw [h_p', h_q', ←pow_two, ←pow_two] at h_mono
-  specialize h_mono (Nat.pow_lt_pow_left h_votes (by decide))
+  specialize h_mono (Nat.pow_lt_pow_left h_votes (by decide)) App h_App App' h_App'
   grind
 
 /-- Balinski-Young impossibility theorem: If an anonymous rule is a quota rule, then it is not
@@ -170,29 +182,31 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
       | _ => 0
     house_size := 8
   }
-  have m_c_le_2 : rule.res e ⟨"C"⟩ ≤ 2 := by
+  obtain ⟨App, h_App⟩ := rule.non_emptiness e
+
+  have m_c_le_2 : App ⟨"C"⟩ ≤ 2 := by
     have h_c := h_quota.quota_rule e ⟨"C"⟩
     simp [e] at h_c
     norm_num at h_c
     grind
-  have m_d_le_5 : rule.res e ⟨"D"⟩ ≤ 5 := by
+  have m_d_le_5 : App ⟨"D"⟩ ≤ 5 := by
     have h_d := h_quota.quota_rule e ⟨"D"⟩
     simp [e] at h_d
     norm_num at h_d
     grind
-  have m_b_eq_1 : rule.res e ⟨"B"⟩ = 1 := by
-    have h_b := h_quota.quota_rule e ⟨"B"⟩
+  have m_b_eq_1 : App ⟨"B"⟩ = 1 := by
+    have h_b := h_quota.quota_rule e ⟨"B"⟩ App h_App
     simp [e] at h_b
     norm_num at h_b
     rcases h_b with (m_b_eq_0 | m_b_eq_1)
-    · have m_a_eq_1 : rule.res e ⟨"A"⟩ = 0 := by
-        have m_a_le_m_b := h_concord.concordant e ⟨"A"⟩ ⟨"B"⟩ (by decide)
+    · have m_a_eq_1 : App ⟨"A"⟩ = 0 := by
+        have m_a_le_m_b := h_concord.concordant e ⟨"A"⟩ ⟨"B"⟩ (by decide) App h_App
         linarith
-      have : ∑ p ∈ e.parties, rule.res e p ≤ 7 := by
+      have : ∑ p ∈ e.parties, App p ≤ 7 := by
         simp [e]
         linarith [m_a_eq_1, m_b_eq_0, m_c_le_2, m_d_le_5]
-      have : ∑ p ∈ e.parties, rule.res e p = 8 := by
-        exact rule.house_size_feasibility e
+      have : ∑ p ∈ e.parties, App p = 8 := by
+        exact rule.house_size_feasibility e App h_App
       linarith
     · assumption
 
@@ -208,28 +222,32 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
       | _ => 0
     house_size := 8
   }
-  have m_d_ge_6' : rule.res e' ⟨"D"⟩ ≥ 6 := by
+  obtain ⟨App', h_App'⟩ := rule.non_emptiness e'
+
+  have m_d_ge_6' : App' ⟨"D"⟩ ≥ 6 := by
     have h_d' := h_quota.quota_rule e' ⟨"D"⟩
     simp [e'] at h_d'
     norm_num at h_d'
     grind
-  have m_b_eq_0' : rule.res e' ⟨"B"⟩ = 0 := by
-    have h_b' := h_quota.quota_rule e' ⟨"B"⟩
+  have m_b_eq_0' : App' ⟨"B"⟩ = 0 := by
+    have h_b' := h_quota.quota_rule e' ⟨"B"⟩ App' h_App'
     simp [e'] at h_b'
     norm_num at h_b'
     rcases h_b' with (m_b_eq_0' | m_b_eq_1')
     · assumption
-    · have m_a_ge_1' : rule.res e' ⟨"A"⟩ ≥ 1 := by
-        have m_b_ge_m_a' := h_concord.concordant e' ⟨"B"⟩ ⟨"A"⟩ (by decide)
+    · have m_a_ge_1' : App' ⟨"A"⟩ ≥ 1 := by
+        have m_b_ge_m_a' := h_concord.concordant e' ⟨"B"⟩ ⟨"A"⟩ (by decide) App' h_App'
         linarith
-      have m_c_ge_1' : rule.res e' ⟨"C"⟩ ≥ 1 := by
-        have m_c_ge_m_b' := h_concord.concordant e' ⟨"B"⟩ ⟨"C"⟩ (by decide)
+      have m_c_ge_1' : App' ⟨"C"⟩ ≥ 1 := by
+        have m_c_ge_m_b' := h_concord.concordant e' ⟨"B"⟩ ⟨"C"⟩ (by decide) App' h_App'
         linarith
-      have : ∑ p ∈ e'.parties, rule.res e' p ≥ 9 := by
+      have : ∑ p ∈ e'.parties, App' p ≥ 9 := by
         simp [e']
         linarith [m_a_ge_1', m_b_eq_1', m_c_ge_1', m_d_ge_6']
-      have : ∑ p ∈ e'.parties, rule.res e' p = 8 := by
-        exact rule.house_size_feasibility e'
+      have : ∑ p ∈ e'.parties, App' p = 8 := by
+        exact rule.house_size_feasibility e' App' h_App'
       linarith
+
   replace h_mono := h_mono.population_monotonone e e' ⟨"B"⟩ ⟨"D"⟩ (by trivial) (by decide)
+    App h_App App' h_App'
   grind
