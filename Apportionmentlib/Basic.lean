@@ -28,6 +28,7 @@ All definitions follow those given in a textbook by F. Pukelsheim [Pukelsheim201
 * `IsAnonymous`
 * `IsBalanced`
 * `IsConcordant`
+* `IsDecent`
 * `IsQuotaRule`
 * `IsPopulationMonotone`
 
@@ -119,6 +120,16 @@ class IsConcordant (rule : Rule) : Prop where
     election.votes p < election.votes q →
       ∀ App ∈ rule.res election,
         App p ≤ App q
+
+/-- A rules is *decent* if scaling the number of votes for each party by the same positive integer
+does not change the apportionment. -/
+class IsDecent (rule : Rule) : Prop where
+  decent (election : Election) (k : ℕ+) :
+    let election' : Election := { parties := election.parties,
+                                  votes := fun p ↦ k * election.votes p,
+                                  house_size := election.house_size
+                                }
+    rule.res election' = rule.res election
 
 /-- A rule is a *quota rule* if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its Hare-quota. -/
