@@ -17,7 +17,8 @@ We define basic notions related to apportionment methods, such as elections, app
 apportionment rules, and properties of apportionment rules. We also prove the Balinski-Young
 impossibility theorem.
 
-All definitions follow those given in a textbook by F. Pukelsheim [Pukelsheim2017].
+All definitions follow those given in a textbook by F. Pukelsheim [Pukelsheim2017]. Distinction
+between weak and strong exactness is added, following [PalomaresPukelsheimRamirez2016].
 
 ## Main definitions
 
@@ -29,6 +30,7 @@ All definitions follow those given in a textbook by F. Pukelsheim [Pukelsheim201
 * `IsBalanced`
 * `IsConcordant`
 * `IsDecent`
+* `IsExact`
 * `IsQuotaRule`
 * `IsPopulationMonotone`
 
@@ -47,10 +49,12 @@ we define `Election.votes` with `| _ => 0`, so parties outside `election.parties
 
 ## References
 
-* [F. Pukelsheim, *Proportional Representation: Apportionment Methods and Their Applications*
-  ][Pukelsheim2017]
 * [M. L. Balinski, H. P. Young, *Fair Representation: Meeting the Ideal of One Man, One Vote*
   ][BalinskiYoung1982]
+* [A. Palomares, F. Pukelsheim, J. A. Ramírez, *The whole and its parts: On the coherence theorem of
+  Balinski and Young*][PalomaresPukelsheimRamirez2016]
+* [F. Pukelsheim, *Proportional Representation: Apportionment Methods and Their Applications*
+  ][Pukelsheim2017]
 
 -/
 
@@ -130,6 +134,18 @@ class IsDecent (rule : Rule) : Prop where
                                   house_size := election.house_size
                                 }
     rule.res election' = rule.res election
+
+
+/-- A rule is *weakly exact* if every `Apportionment`, when viewed as an input vote distribution
+`Election.votes`, is reproduced as the unique solution. -/
+class IsExact (rule : Rule) : Prop where
+  exact (election : Election) :
+    ∀ App ∈ rule.res election,
+      let election' : Election := { parties := election.parties,
+                                    votes := App,
+                                    house_size := election.house_size
+                                  }
+      rule.res election' = {App}
 
 /-- A rule is a *quota rule* if the number of seats allocated to each party `p` is either the floor
 or the ceiling of its Hare-quota. -/
