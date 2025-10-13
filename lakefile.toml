@@ -1,6 +1,6 @@
 name = "Apportionmentlib"
 version = "0.1.0"
-description = "Formalization of the Balinski-Young theorem and apportionment rules in Lean 4."
+description = "Formal verification of apportionment theory."
 keywords = ["math", "social choice theory"]
 defaultTargets = ["Apportionmentlib"]
 
