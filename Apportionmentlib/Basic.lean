@@ -60,6 +60,8 @@ we define `Election.votes` with `| _ => 0`, so parties outside `election.parties
 
 open BigOperators
 
+namespace Apportionmentlib
+
 /-- Party (or candidate, state, etc.) in an election. They are identified by their name. -/
 structure Party where
   name : String
@@ -278,3 +280,5 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
   replace h_mono := h_mono.population_monotonone e e' ⟨"B"⟩ ⟨"D"⟩ (by trivial) (by decide)
     App h_App App' h_App'
   grind
+
+end Apportionmentlib
