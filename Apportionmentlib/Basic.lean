@@ -68,7 +68,7 @@ structure Party where
   deriving DecidableEq
 
 instance : Repr Party where
-  reprPrec p _ := s!"{p.name} : Party"
+  reprPrec p _ := s!"Party \"{p.name}\""
 
 variable [Fintype Party]
 
