@@ -60,6 +60,10 @@ structure Election (n : ℕ) where
   houseSize : ℕ
   deriving DecidableEq
 
+instance {n : ℕ} : Repr (Election n) where
+  reprPrec e _ :=
+    "Election(votes = " ++ repr e.votes.toArray ++ ", houseSize = " ++ repr e.houseSize ++ ")"
+
 /-- An apportionment is a vector of natural numbers representing the number of seats allocated to
 each party (at the corresponding index). -/
 abbrev Apportionment (n : ℕ) : Type := Vector ℕ n
