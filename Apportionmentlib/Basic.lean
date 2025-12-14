@@ -173,13 +173,11 @@ lemma if_IsPopulationMonotone_then_IsConcordant (rule : Rule) [h_anon : IsAnonym
     [h_mono : IsPopulationMonotone rule] : IsConcordant rule := by
   constructor
   intro e p q h_votes App h_App
-
   let σ := fun r ↦ -- swap parties p and q
     if r = p then q
     else if r = q then p
     else r
-
-  set e' : Election := {
+  let e' : Election := {
     parties := e.parties
     votes := e.votes ∘ σ
     house_size := e.house_size
@@ -200,7 +198,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     ¬IsPopulationMonotone rule := by
   by_contra h_mono
   have h_concord := if_IsPopulationMonotone_then_IsConcordant rule
-
+  -- first election --
   let e : Election := {
     parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩}
     votes := fun
@@ -212,7 +210,6 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     house_size := 8
   }
   obtain ⟨App, h_App⟩ := rule.non_emptiness e
-
   have m_c_le_2 : App ⟨"C"⟩ ≤ 2 := by
     have h_c := h_quota.quota_rule e ⟨"C"⟩
     simp [e] at h_c
@@ -225,9 +222,11 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     grind
   have m_b_eq_1 : App ⟨"B"⟩ = 1 := by
     have h_b := h_quota.quota_rule e ⟨"B"⟩ App h_App
-    simp [e] at h_b
+    simp only [String.reduceEq, imp_self, Nat.cast_ofNat, Election.total_voters, Finset.mem_insert,
+      Party.mk.injEq, Finset.mem_singleton, or_self, not_false_eq_true, Finset.sum_insert,
+      Finset.sum_singleton, Nat.reduceAdd, e] at h_b
     norm_num at h_b
-    rcases h_b with (m_b_eq_0 | m_b_eq_1)
+    rcases h_b with m_b_eq_0 | m_b_eq_1
     · have m_a_eq_1 : App ⟨"A"⟩ = 0 := by
         have m_a_le_m_b := h_concord.concordant e ⟨"A"⟩ ⟨"B"⟩ (by decide) App h_App
         linarith
@@ -238,7 +237,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
         exact rule.house_size_feasibility e App h_App
       linarith
     · assumption
-
+  -- second election --
   -- We give an even stronger counterexample than needed: not only does B's support increase at a
   -- faster rate than D's, but D's support decreases while B's support increases.
   let e' : Election := {
@@ -252,7 +251,6 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     house_size := 8
   }
   obtain ⟨App', h_App'⟩ := rule.non_emptiness e'
-
   have m_d_ge_6' : App' ⟨"D"⟩ ≥ 6 := by
     have h_d' := h_quota.quota_rule e' ⟨"D"⟩
     simp [e'] at h_d'
@@ -260,9 +258,11 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     grind
   have m_b_eq_0' : App' ⟨"B"⟩ = 0 := by
     have h_b' := h_quota.quota_rule e' ⟨"B"⟩ App' h_App'
-    simp [e'] at h_b'
+    simp only [String.reduceEq, imp_self, Nat.cast_ofNat, Election.total_voters, Finset.mem_insert,
+      Party.mk.injEq, Finset.mem_singleton, or_self, not_false_eq_true, Finset.sum_insert,
+      Finset.sum_singleton, Nat.reduceAdd, e'] at h_b'
     norm_num at h_b'
-    rcases h_b' with (m_b_eq_0' | m_b_eq_1')
+    rcases h_b' with m_b_eq_0' | m_b_eq_1'
     · assumption
     · have m_a_ge_1' : App' ⟨"A"⟩ ≥ 1 := by
         have m_b_ge_m_a' := h_concord.concordant e' ⟨"B"⟩ ⟨"A"⟩ (by decide) App' h_App'
@@ -276,7 +276,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
       have : ∑ p ∈ e'.parties, App' p = 8 := by
         exact rule.house_size_feasibility e' App' h_App'
       linarith
-
+  -- show that it's not population monotone --
   replace h_mono := h_mono.population_monotonone e e' ⟨"B"⟩ ⟨"D"⟩ (by trivial) (by decide)
     App h_App App' h_App'
   grind
