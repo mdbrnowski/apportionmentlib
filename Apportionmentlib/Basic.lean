@@ -36,8 +36,7 @@ between weak and strong exactness is added, following [PalomaresPukelsheimRamire
 
 ## Main statements
 
-* `if_IsPopulationMonotone_then_IsConcordant`: anonymity and population monotonicity imply
-  concordance.
+* `IsConcordant_of_IsPopulationMonotone`: anonymity and population monotonicity imply concordance.
 * `balinski_young`: Balinski-Young impossibility theorem.
 
 ## Implementation details
@@ -77,10 +76,10 @@ and the total number of seats to be allocated. -/
 structure Election where
   parties : Finset Party
   votes : Party → ℕ
-  house_size : ℕ
+  houseSize : ℕ
 
 @[simp]
-def Election.total_voters (election : Election) : ℕ :=
+def Election.totalVoters (election : Election) : ℕ :=
   ∑ p ∈ election.parties, election.votes p
 
 /-- An apportionment is a function from parties to the number of seats allocated to each party. -/
@@ -98,7 +97,7 @@ structure Rule where
     election.votes p = 0 → ∀ App ∈ res election, App p = 0
   house_size_feasibility (election : Election) :
     ∀ App ∈ res election,
-      ∑ p ∈ election.parties, App p = election.house_size
+      ∑ p ∈ election.parties, App p = election.houseSize
 
 /-- A rule is *anonymous* if permuting the votes of the parties permutes the allocation of seats in
 the same way. Informally, the names of the parties do not matter. -/
@@ -107,7 +106,7 @@ class IsAnonymous (rule : Rule) : Prop where
     (σ p = σ q → p = q) →
       let election' : Election := { parties := election.parties,
                                     votes := election.votes ∘ σ,
-                                    house_size := election.house_size
+                                    houseSize := election.houseSize
                                   }
       rule.res election' = (rule.res election).image (· ∘ σ)
 
@@ -133,7 +132,7 @@ class IsDecent (rule : Rule) : Prop where
   decent (election : Election) (k : ℕ+) :
     let election' : Election := { parties := election.parties,
                                   votes := fun p ↦ k * election.votes p,
-                                  house_size := election.house_size
+                                  houseSize := election.houseSize
                                 }
     rule.res election' = rule.res election
 
@@ -145,7 +144,7 @@ class IsExact (rule : Rule) : Prop where
     ∀ App ∈ rule.res election,
       let election' : Election := { parties := election.parties,
                                     votes := App,
-                                    house_size := election.house_size
+                                    houseSize := election.houseSize
                                   }
       rule.res election' = {App}
 
@@ -153,7 +152,7 @@ class IsExact (rule : Rule) : Prop where
 or the ceiling of its Hare-quota. -/
 class IsQuotaRule (rule : Rule) : Prop where
   quota_rule (election : Election) (p : Party) :
-    let quota := (election.votes p * election.house_size : ℚ) / (election.total_voters : ℚ)
+    let quota := (election.votes p * election.houseSize : ℚ) / (election.totalVoters : ℚ)
     ∀ App ∈ rule.res election,
       App p = ⌊quota⌋ ∨ App p = ⌈quota⌉
 
@@ -161,15 +160,15 @@ class IsQuotaRule (rule : Rule) : Prop where
 A population paradox occurs when the support for party `p` increases at a faster rate than that for
 party `q`, but `p` loses seats while `q` gains seats. -/
 class IsPopulationMonotone (rule : Rule) : Prop where
-  population_monotonone (election₁ election₂ : Election) (p q : Party) :
-    election₁.parties = election₂.parties ∧ election₁.house_size = election₂.house_size →
+  population_monotone (election₁ election₂ : Election) (p q : Party) :
+    election₁.parties = election₂.parties ∧ election₁.houseSize = election₂.houseSize →
       -- p' support grows faster than q's (multiplying crosswise to avoid ℚ)
       election₂.votes p * election₁.votes q > election₂.votes q * election₁.votes p →
         ∀ App₁ ∈ rule.res election₁, ∀ App₂ ∈ rule.res election₂,
           ¬(App₁ p > App₂ p ∧ App₁ q < App₂ q)  -- p gets less seats, q gets more seats
 
 /-- If an anonymous rule is population monotone, then it is concordant. -/
-lemma if_IsPopulationMonotone_then_IsConcordant (rule : Rule) [h_anon : IsAnonymous rule]
+lemma IsConcordant_of_IsPopulationMonotone (rule : Rule) [h_anon : IsAnonymous rule]
     [h_mono : IsPopulationMonotone rule] : IsConcordant rule := by
   constructor
   intro e p q h_votes App h_App
@@ -180,11 +179,11 @@ lemma if_IsPopulationMonotone_then_IsConcordant (rule : Rule) [h_anon : IsAnonym
   let e' : Election := {
     parties := e.parties
     votes := e.votes ∘ σ
-    house_size := e.house_size
+    houseSize := e.houseSize
   }
   let App' := App ∘ σ
   replace h_anon := h_anon.anonymous e σ p q (by grind)
-  replace h_mono := h_mono.population_monotonone e e' p q (by trivial)
+  replace h_mono := h_mono.population_monotone e e' p q (by trivial)
   have h_App' : App' ∈ rule.res e' := by grind
   have h_p' : e'.votes p = e.votes q := by grind
   have h_q' : e'.votes q = e.votes p := by grind
@@ -197,7 +196,7 @@ population monotone. Thus, no apportionment method can satisfy both properties s
 theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule rule] :
     ¬IsPopulationMonotone rule := by
   by_contra h_mono
-  have h_concord := if_IsPopulationMonotone_then_IsConcordant rule
+  have h_concord := IsConcordant_of_IsPopulationMonotone rule
   -- first election --
   let e : Election := {
     parties := {⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩}
@@ -207,7 +206,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
       | ⟨"C"⟩ => 2450
       | ⟨"D"⟩ => 6220
       | _ => 0
-    house_size := 8
+    houseSize := 8
   }
   obtain ⟨App, h_App⟩ := rule.non_emptiness e
   have m_c_le_2 : App ⟨"C"⟩ ≤ 2 := by
@@ -222,7 +221,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     grind
   have m_b_eq_1 : App ⟨"B"⟩ = 1 := by
     have h_b := h_quota.quota_rule e ⟨"B"⟩ App h_App
-    simp only [String.reduceEq, imp_self, Nat.cast_ofNat, Election.total_voters, Finset.mem_insert,
+    simp only [String.reduceEq, imp_self, Nat.cast_ofNat, Election.totalVoters, Finset.mem_insert,
       Party.mk.injEq, Finset.mem_singleton, or_self, not_false_eq_true, Finset.sum_insert,
       Finset.sum_singleton, Nat.reduceAdd, e] at h_b
     norm_num at h_b
@@ -248,7 +247,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
       | ⟨"C"⟩ => 700
       | ⟨"D"⟩ => 6200
       | _ => 0
-    house_size := 8
+    houseSize := 8
   }
   obtain ⟨App', h_App'⟩ := rule.non_emptiness e'
   have m_d_ge_6' : App' ⟨"D"⟩ ≥ 6 := by
@@ -258,7 +257,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     grind
   have m_b_eq_0' : App' ⟨"B"⟩ = 0 := by
     have h_b' := h_quota.quota_rule e' ⟨"B"⟩ App' h_App'
-    simp only [String.reduceEq, imp_self, Nat.cast_ofNat, Election.total_voters, Finset.mem_insert,
+    simp only [String.reduceEq, imp_self, Nat.cast_ofNat, Election.totalVoters, Finset.mem_insert,
       Party.mk.injEq, Finset.mem_singleton, or_self, not_false_eq_true, Finset.sum_insert,
       Finset.sum_singleton, Nat.reduceAdd, e'] at h_b'
     norm_num at h_b'
@@ -277,7 +276,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
         exact rule.house_size_feasibility e' App' h_App'
       linarith
   -- show that it's not population monotone --
-  replace h_mono := h_mono.population_monotonone e e' ⟨"B"⟩ ⟨"D"⟩ (by trivial) (by decide)
+  replace h_mono := h_mono.population_monotone e e' ⟨"B"⟩ ⟨"D"⟩ (by trivial) (by decide)
     App h_App App' h_App'
   grind
 
