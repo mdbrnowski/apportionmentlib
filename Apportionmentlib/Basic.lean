@@ -22,7 +22,6 @@ between weak and strong exactness is added, following [PalomaresPukelsheimRamire
 
 ## Main definitions
 
-* `Party`
 * `Election`
 * `Apportionment`
 * `Rule`
@@ -54,18 +53,9 @@ open BigOperators
 
 namespace Apportionmentlib
 
-/-- Party (or candidate, state, etc.) in an election. They are identified by their name. -/
-structure Party where
-  name : String
-  deriving DecidableEq
-
-instance : Repr Party where
-  reprPrec p _ := s!"{p.name} : Party"
-
-/-- An election with a vector of parties, a vector of their votes, and the total number of seats to
-be allocated. -/
+/-- An election with a vector of votes for `n` parties (at the corresponding indices) and the total
+number of seats to be allocated. -/
 structure Election (n : ℕ) where
-  parties : Vector Party n
   votes : Vector ℕ n
   houseSize : ℕ
   deriving DecidableEq
@@ -88,11 +78,10 @@ structure Rule where
     ∀ App ∈ res election, App.sum = election.houseSize
 
 /-- A rule is *anonymous* if permuting the votes of the parties permutes the allocation of seats in
-the same way. Informally, the names of the parties do not matter. -/
+the same way. -/
 class IsAnonymous (rule : Rule) : Prop where
   anonymous {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) :
-    let election' : Election n := { parties := election.parties,
-                                    votes := Vector.ofFn fun i => election.votes[σ i],
+    let election' : Election n := { votes := Vector.ofFn fun i => election.votes[σ i]
                                     houseSize := election.houseSize
                                   }
     ∀ App, App ∈ rule.res election' ↔
@@ -116,8 +105,7 @@ class IsConcordant (rule : Rule) : Prop where
 does not change the apportionment. -/
 class IsDecent (rule : Rule) : Prop where
   decent {n : ℕ} (election : Election n) (k : ℕ+) :
-    let election' : Election n := { parties := election.parties,
-                                    votes := Vector.ofFn fun i => k * election.votes[i],
+    let election' : Election n := { votes := Vector.ofFn fun i => k * election.votes[i]
                                     houseSize := election.houseSize
                                   }
     rule.res election' = rule.res election
@@ -127,8 +115,7 @@ class IsDecent (rule : Rule) : Prop where
 class IsExact (rule : Rule) : Prop where
   exact {n : ℕ} (election : Election n) :
     ∀ App ∈ rule.res election,
-      let election' : Election n := { parties := election.parties,
-                                      votes := App,
+      let election' : Election n := { votes := App
                                       houseSize := election.houseSize
                                     }
       rule.res election' = {App}
@@ -145,7 +132,7 @@ A population paradox occurs when the support for party `p` increases at a faster
 party `q`, but `p` loses seats while `q` gains seats. -/
 class IsPopulationMonotone (rule : Rule) : Prop where
   population_monotone {n : ℕ} (election₁ election₂ : Election n) (i j : Fin n) :
-    election₁.parties = election₂.parties ∧ election₁.houseSize = election₂.houseSize →
+    election₁.houseSize = election₂.houseSize →
       -- i's support grows faster than j's (multiplying crosswise to avoid ℚ)
       election₂.votes[i] * election₁.votes[j] > election₂.votes[j] * election₁.votes[i] →
         ∀ App₁ ∈ rule.res election₁, ∀ App₂ ∈ rule.res election₂,
@@ -159,7 +146,6 @@ lemma IsConcordant_of_IsPopulationMonotone (rule : Rule) [h_anon : IsAnonymous r
   intro n e i j h_votes App h_App
   let σ : Equiv.Perm (Fin n) := Equiv.swap i j
   let e' : Election n := {
-    parties := e.parties
     votes := Vector.ofFn fun r => e.votes[σ r]
     houseSize := e.houseSize
   }
@@ -184,8 +170,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
   have h_concord := IsConcordant_of_IsPopulationMonotone rule
   -- first election --
   let e : Election 4 := {
-    parties := #v[⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩]
-    votes := #v[660, 670, 2450, 6220],
+    votes := #v[660, 670, 2450, 6220]
     houseSize := 8
   }
   obtain ⟨App, h_App⟩ := rule.non_emptiness e
@@ -223,7 +208,6 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
   -- We give an even stronger counterexample than needed: not only does B's support increase at a
   -- faster rate than D's, but D's support decreases while B's support increases.
   let e' : Election 4 := {
-    parties := #v[⟨"A"⟩, ⟨"B"⟩, ⟨"C"⟩, ⟨"D"⟩]
     votes := #v[680, 675, 700, 6200]
     houseSize := 8
   }
