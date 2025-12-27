@@ -191,7 +191,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
       List.sum_toArray, List.sum_cons, List.sum_nil, add_zero, Nat.reduceAdd, e] at this
     norm_num at this
     rcases this with m1_eq_0 | m1_eq_1
-    · have m0_eq_1 : App[0] = 0 := by
+    · have m0_eq_0 : App[0] = 0 := by
         have : App[0] ≤ App[1] := by exact h_concord.concordant e 0 1 (by decide) App h_App
         linarith
       have : App.sum ≤ 7 := by
@@ -199,7 +199,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
           simp only [Vector.sum]
           have h_array : App.toArray = #[App[0], App[1], App[2], App[3]] := by grind
           exact h_array.symm ▸ by simp [add_assoc]
-        linarith only [this, m0_eq_1, m1_eq_0, m2_le_2, m3_le_5]
+        linarith only [this, m0_eq_0, m1_eq_0, m2_le_2, m3_le_5]
       have : App.sum = 8 := by
         exact rule.house_size_feasibility e App h_App
       linarith
