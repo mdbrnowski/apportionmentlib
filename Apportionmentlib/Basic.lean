@@ -87,21 +87,21 @@ class IsAnonymous (rule : Rule) : Prop where
     ∀ App, App ∈ rule.res election' ↔
       ∃ App' ∈ rule.res election, ∀ i, App[i] = App'[σ i]
 
-/-- A rule is *balanced* if whenever two parties `p` and `q` have the same number of votes, then
-the difference in the number of seats allocated to them is at most one. -/
+/-- A rule is *balanced* if whenever two parties have the same number of votes, then the difference
+in the number of seats allocated to them is at most one. -/
 class IsBalanced (rule : Rule) : Prop where
   balanced {n : ℕ} (election : Election n) (i j : Fin n) :
     election.votes[i] = election.votes[j] →
       ∀ App ∈ rule.res election, App[i].dist App[j] ≤ 1
 
-/-- A rule is *concordant* if whenever party `p` has fewer votes than party `q`, then `p` is
-allocated no more seats than `q`. -/
+/-- A rule is *concordant* if whenever one party has fewer votes than another, then it is allocated
+no more seats than that other party. -/
 class IsConcordant (rule : Rule) : Prop where
   concordant {n : ℕ} (election : Election n) (i j : Fin n) :
     election.votes[i] < election.votes[j] →
       ∀ App ∈ rule.res election, App[i] ≤ App[j]
 
-/-- A rules is *decent* if scaling the number of votes for each party by the same positive integer
+/-- A rule is *decent* if scaling the number of votes for each party by the same positive integer
 does not change the apportionment. -/
 class IsDecent (rule : Rule) : Prop where
   decent {n : ℕ} (election : Election n) (k : ℕ+) :
@@ -120,16 +120,16 @@ class IsExact (rule : Rule) : Prop where
                                     }
       rule.res election' = {App}
 
-/-- A rule is a *quota rule* if the number of seats allocated to each party `p` is either the floor
-or the ceiling of its Hare-quota. -/
+/-- A rule is a *quota rule* if the number of seats allocated to each party is either the floor or
+the ceiling of its Hare-quota. -/
 class IsQuotaRule (rule : Rule) : Prop where
   quota_rule {n : ℕ} (election : Election n) (i : Fin n) :
     let quota := (election.votes[i] * election.houseSize : ℚ) / (election.votes.sum : ℚ)
     ∀ App ∈ rule.res election, App[i] = ⌊quota⌋ ∨ App[i] = ⌈quota⌉
 
 /-- A rule is *population monotone* (or *vote ratio monotone*) if population paradoxes do not occur.
-A population paradox occurs when the support for party `p` increases at a faster rate than that for
-party `q`, but `p` loses seats while `q` gains seats. -/
+A population paradox occurs when the support for party `i` increases at a faster rate than that for
+party `j`, but `i` loses seats while `j` gains seats. -/
 class IsPopulationMonotone (rule : Rule) : Prop where
   population_monotone {n : ℕ} (election₁ election₂ : Election n) (i j : Fin n) :
     election₁.houseSize = election₂.houseSize →
