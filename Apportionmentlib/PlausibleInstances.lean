@@ -29,12 +29,19 @@ open Plausible
 
 namespace Apportionmentlib
 
+instance {n : ℕ} : Shrinkable (Vector ℕ n) where
+  shrink v :=
+    (List.finRange n).flatMap fun (i : Fin n) =>
+      (Shrinkable.shrink v[i]).map fun v' => v.set i v'
+
 instance {n : ℕ} : Shrinkable (Election n) where
   shrink e :=
+    let shrunkVotes := Shrinkable.shrink e.votes
     let shrunkHouseSizes := Shrinkable.shrink e.houseSize
-    Election.mk
-      <$> pure e.votes
-      <*> shrunkHouseSizes
+    -- shrink votes only, shrink houseSize only, or shrink both
+    (shrunkVotes.map fun v => Election.mk v e.houseSize) ++
+    (shrunkHouseSizes.map fun h => Election.mk e.votes h) ++
+    (shrunkVotes.flatMap fun v => shrunkHouseSizes.map fun h => Election.mk v h)
 
 instance {n : ℕ} : Arbitrary (Election n) where
   arbitrary := do
