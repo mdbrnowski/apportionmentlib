@@ -20,6 +20,8 @@ open Apportionmentlib
 
 example {n : ℕ} (e : Election n) (h : 2 < n) : e.votes[0] > e.votes[1] := by
   plausible
+
+#sample Election 2
 ```
 -/
 
@@ -44,18 +46,5 @@ instance {n : ℕ} : Arbitrary (Election n) where
     }
 
 instance {n : ℕ} : SampleableExt (Election n) := SampleableExt.selfContained
-
-#eval Shrinkable.shrink 10
-
-#eval Shrinkable.shrink ({
-  votes := #v[100, 200, 300],
-  houseSize := 10
-} : Election 3)
-
--- #sample Election 3
-
-
-example {n : ℕ} (e : Election n) (h : 2 < n) : e.votes[0] > e.votes[1] := by
-  plausible
 
 end Apportionmentlib
