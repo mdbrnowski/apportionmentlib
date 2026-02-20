@@ -8,7 +8,8 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Nat.Dist
 import Mathlib.Data.Rat.Init
 import Mathlib.Data.Rat.Floor
-import Mathlib.Tactic.NormNum
+import Mathlib.Tactic
+import Apportionmentlib.Utils
 
 /-!
 # Basic
@@ -57,12 +58,34 @@ namespace Apportionmentlib
 number of seats to be allocated. -/
 structure Election (n : ℕ) where
   votes : Vector ℕ n
-  houseSize : ℕ
+  houseSize : ℕ+
+  votes_sum_pos : 0 < votes.sum
   deriving DecidableEq
 
 instance {n : ℕ} : Repr (Election n) where
   reprPrec e _ :=
     "{ votes := " ++ repr e.votes.toArray ++ ", houseSize := " ++ repr e.houseSize ++ " }"
+
+@[simp]
+def Election.mk_by_perm {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) : Election n :=
+  { votes := Vector.ofFn fun i => election.votes[σ i]
+    houseSize := election.houseSize
+    votes_sum_pos := by
+      have := election.votes_sum_pos
+      simp only [sum_pos_iff_exists_pos, Fin.getElem_fin, Vector.getElem_ofFn, Fin.eta] at this ⊢
+      obtain ⟨i, hi⟩ := this
+      use σ.symm i
+      simpa
+  }
+
+@[simp]
+def Election.mk_by_scale {n : ℕ} (election : Election n) (k : ℕ+) : Election n :=
+  { votes := Vector.ofFn fun i => k * election.votes[i]
+    houseSize := election.houseSize
+    votes_sum_pos := by
+      have := election.votes_sum_pos
+      simpa [sum_pos_iff_exists_pos]
+  }
 
 /-- An apportionment is a vector of natural numbers representing the number of seats allocated to
 each party (at the corresponding index). -/
@@ -85,9 +108,7 @@ structure Rule where
 the same way. -/
 class IsAnonymous (rule : Rule) : Prop where
   anonymous {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) :
-    let election' : Election n := { votes := Vector.ofFn fun i => election.votes[σ i]
-                                    houseSize := election.houseSize
-                                  }
+    let election' : Election n := election.mk_by_perm σ
     ∀ App, App ∈ rule.res election' ↔
       ∃ App' ∈ rule.res election, ∀ i, App[i] = App'[σ i]
 
@@ -109,26 +130,29 @@ class IsConcordant (rule : Rule) : Prop where
 does not change the apportionment. -/
 class IsDecent (rule : Rule) : Prop where
   decent {n : ℕ} (election : Election n) (k : ℕ+) :
-    let election' : Election n := { votes := Vector.ofFn fun i => k * election.votes[i]
-                                    houseSize := election.houseSize
-                                  }
+    let election' : Election n := election.mk_by_scale k
     rule.res election' = rule.res election
 
 /-- A rule is *weakly exact* if every `Apportionment`, when viewed as an input vote distribution
 `Election.votes`, is reproduced as the unique solution. -/
 class IsExact (rule : Rule) : Prop where
   exact {n : ℕ} (election : Election n) :
-    ∀ App ∈ rule.res election,
-      let election' : Election n := { votes := App
-                                      houseSize := election.houseSize
-                                    }
+    -- ∀ App ∈ rule.res election
+    ∀ App : Apportionment n, (hApp : App ∈ rule.res election) →
+      let election' : Election n := {
+        votes := App
+        houseSize := election.houseSize
+        votes_sum_pos := by
+          rw [rule.house_size_feasibility (n := n) election App hApp]
+          exact election.houseSize.pos
+      }
       rule.res election' = {App}
 
 /-- A rule is a *quota rule* if the number of seats allocated to each party is either the floor or
 the ceiling of its Hare-quota. -/
 class IsQuotaRule (rule : Rule) : Prop where
   quota_rule {n : ℕ} (election : Election n) (i : Fin n) :
-    let quota := (election.votes[i] * election.houseSize : ℚ) / (election.votes.sum : ℚ)
+    let quota := (election.votes[i] * election.houseSize : ℚ) / election.votes.sum
     ∀ App ∈ rule.res election, App[i] = ⌊quota⌋ ∨ App[i] = ⌈quota⌉
 
 /-- A rule is *population monotone* (or *vote ratio monotone*) if population paradoxes do not occur.
@@ -149,10 +173,7 @@ lemma IsConcordant_of_IsPopulationMonotone (rule : Rule) [h_anon : IsAnonymous r
   constructor
   intro n e i j h_votes App h_App
   let σ : Equiv.Perm (Fin n) := Equiv.swap i j
-  let e' : Election n := {
-    votes := Vector.ofFn fun r => e.votes[σ r]
-    houseSize := e.houseSize
-  }
+  let e' : Election n := e.mk_by_perm σ
   let App' := Vector.ofFn fun r => App[σ r]
   replace h_anon := h_anon.anonymous e σ App'
   have h_App' : App' ∈ rule.res e' := by
@@ -176,77 +197,81 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
   let e : Election 4 := {
     votes := #v[660, 670, 2450, 6220]
     houseSize := 8
+    votes_sum_pos := by decide
   }
   obtain ⟨App, h_App⟩ := rule.non_emptiness e
   have m2_le_2 : App[2] ≤ 2 := by
     have := h_quota.quota_rule e 2 App h_App
     simp [e] at this
-    norm_cast at this
-    grind
+    norm_num at this
+    omega
   have m3_le_5 : App[3] ≤ 5 := by
     have := h_quota.quota_rule e 3 App h_App
     simp [e] at this
-    norm_cast at this
-    grind
+    norm_num at this
+    omega
   have m1_eq_1 : App[1] = 1 := by
     have := h_quota.quota_rule e 1 App h_App
-    simp only [Fin.isValue, Fin.getElem_fin, Fin.val_one, Vector.getElem_mk, List.getElem_toArray,
-      List.getElem_cons_succ, List.getElem_cons_zero, Nat.cast_ofNat, Vector.sum_mk,
-      List.sum_toArray, List.sum_cons, List.sum_nil, add_zero, Nat.reduceAdd, e] at this
-    norm_num at this
+    replace this : App[1] = 0 ∨ App[1] = 1 := by
+      simp [e] at this
+      norm_num at this
+      assumption
     rcases this with m1_eq_0 | m1_eq_1
     · have m0_eq_0 : App[0] = 0 := by
         have : App[0] ≤ App[1] := by exact h_concord.concordant e 0 1 (by decide) App h_App
-        linarith
+        omega
       have : App.sum ≤ 7 := by
         have : App.sum = App[0] + App[1] + App[2] + App[3] := by
           simp only [Vector.sum]
           have h_array : App.toArray = #[App[0], App[1], App[2], App[3]] := by grind
           exact h_array.symm ▸ by simp [add_assoc]
         linarith only [this, m0_eq_0, m1_eq_0, m2_le_2, m3_le_5]
-      have : App.sum = 8 := by
-        exact rule.house_size_feasibility e App h_App
-      linarith
+      have : App.sum = 8 := rule.house_size_feasibility e App h_App
+      omega
     · assumption
   -- second election --
   -- We give an even stronger counterexample than needed: not only does B's support increase at a
   -- faster rate than D's, but D's support decreases while B's support increases.
   let e' : Election 4 := {
     votes := #v[680, 675, 700, 6200]
-    houseSize := 8
+    houseSize := 8,
+    votes_sum_pos := by decide
   }
   obtain ⟨App', h_App'⟩ := rule.non_emptiness e'
   have m3_ge_6' : App'[3] ≥ 6 := by
     have := h_quota.quota_rule e' 3 App' h_App'
     simp [e'] at this
-    norm_cast at this
-    grind
+    norm_num at this
+    omega
   have m1_eq_0' : App'[1] = 0 := by
     have := h_quota.quota_rule e' 1 App' h_App'
-    simp only [Fin.isValue, Fin.getElem_fin, Fin.val_one, Vector.getElem_mk, List.getElem_toArray,
-      List.getElem_cons_succ, List.getElem_cons_zero, Nat.cast_ofNat, Vector.sum_mk,
-      List.sum_toArray, List.sum_cons, List.sum_nil, add_zero, Nat.reduceAdd, e'] at this
-    norm_num at this
+    replace this : App'[1] = 0 ∨ App'[1] = 1 := by
+      simp [e'] at this
+      norm_num at this
+      assumption
     rcases this with m1_eq_0' | m1_eq_1'
     · assumption
     · have m0_ge_1' : App'[0] ≥ 1 := by
         have : App'[1] ≤ App'[0] := h_concord.concordant e' 1 0 (by decide) App' h_App'
-        linarith
+        omega
       have m2_ge_1' : App'[2] ≥ 1 := by
         have : App'[1] ≤ App'[2] := h_concord.concordant e' 1 2 (by decide) App' h_App'
-        linarith
+        omega
       have : App'.sum ≥ 9 := by
         have : App'.sum = App'[0] + App'[1] + App'[2] + App'[3] := by
           simp only [Vector.sum]
-          have h_array : App'.toArray = #[App'[0], App'[1], App'[2], App'[3]] := by grind
+          have h_array : App'.toArray = #[App'[0], App'[1], App'[2], App'[3]] := by
+            ext i
+            · simp
+            · rcases i with ( _ | _ | _ | _ | i ) <;> trivial
           exact h_array.symm ▸ by simp [add_assoc]
         linarith only [this, m0_ge_1', m1_eq_1', m2_ge_1', m3_ge_6']
-      have : App'.sum = 8 := by
-        exact rule.house_size_feasibility e' App' h_App'
-      linarith
+      have : App'.sum = 8 := rule.house_size_feasibility e' App' h_App'
+      omega
   -- show that it's not population monotone --
   replace h_mono := h_mono.population_monotone e e' 1 3 (by trivial) (by decide)
     App h_App App' h_App'
-  grind
+  have : App'[3] ≤ App[3] := by simp_all
+  omega
 
 end Apportionmentlib
