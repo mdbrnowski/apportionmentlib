@@ -56,18 +56,18 @@ namespace Apportionmentlib
 
 /-- An election with a vector of votes for `n` parties (at the corresponding indices) and the total
 number of seats to be allocated. -/
-structure Election (n : ℕ) where
+structure Election (n : ℕ+) where
   votes : Vector ℕ n
   houseSize : ℕ+
   votes_sum_pos : 0 < votes.sum
   deriving DecidableEq
 
-instance {n : ℕ} : Repr (Election n) where
+instance {n : ℕ+} : Repr (Election n) where
   reprPrec e _ :=
     "{ votes := " ++ repr e.votes.toArray ++ ", houseSize := " ++ repr e.houseSize ++ " }"
 
 @[simp]
-def Election.mk_by_perm {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) : Election n :=
+def Election.mk_by_perm {n : ℕ+} (election : Election n) (σ : Equiv.Perm (Fin n)) : Election n :=
   { votes := Vector.ofFn fun i => election.votes[σ i]
     houseSize := election.houseSize
     votes_sum_pos := by
@@ -79,7 +79,7 @@ def Election.mk_by_perm {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin 
   }
 
 @[simp]
-def Election.mk_by_scale {n : ℕ} (election : Election n) (k : ℕ+) : Election n :=
+def Election.mk_by_scale {n : ℕ+} (election : Election n) (k : ℕ+) : Election n :=
   { votes := Vector.ofFn fun i => k * election.votes[i]
     houseSize := election.houseSize
     votes_sum_pos := by
@@ -89,7 +89,7 @@ def Election.mk_by_scale {n : ℕ} (election : Election n) (k : ℕ+) : Election
 
 /-- An apportionment is a vector of natural numbers representing the number of seats allocated to
 each party (at the corresponding index). -/
-abbrev Apportionment (n : ℕ) : Type := Vector ℕ n
+abbrev Apportionment (n : ℕ+) : Type := Vector ℕ n
 
 /-- An apportionment rule is a function that, given an election, returns a set of apportionments
 satisfying three properties:
@@ -97,17 +97,17 @@ satisfying three properties:
 2. *Inheritance of zeros*: parties with zero votes are allocated zero seats;
 3. *House size feasibility*: the total number of seats allocated is equal to the house size. -/
 structure Rule where
-  res : {n : ℕ} → Election n → Finset (Apportionment n)
-  non_emptiness {n : ℕ} (election : Election n) : (res election).Nonempty
-  inheritance_of_zeros {n : ℕ} (election : Election n) (i : Fin n) :
+  res : {n : ℕ+} → Election n → Finset (Apportionment n)
+  non_emptiness {n : ℕ+} (election : Election n) : (res election).Nonempty
+  inheritance_of_zeros {n : ℕ+} (election : Election n) (i : Fin n) :
     election.votes[i] = 0 → ∀ App ∈ res election, App[i] = 0
-  house_size_feasibility {n : ℕ} (election : Election n) :
+  house_size_feasibility {n : ℕ+} (election : Election n) :
     ∀ App ∈ res election, App.sum = election.houseSize
 
 /-- A rule is *anonymous* if permuting the votes of the parties permutes the allocation of seats in
 the same way. -/
 class IsAnonymous (rule : Rule) : Prop where
-  anonymous {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) :
+  anonymous {n : ℕ+} (election : Election n) (σ : Equiv.Perm (Fin n)) :
     let election' : Election n := election.mk_by_perm σ
     ∀ App, App ∈ rule.res election' ↔
       ∃ App' ∈ rule.res election, ∀ i, App[i] = App'[σ i]
@@ -115,28 +115,28 @@ class IsAnonymous (rule : Rule) : Prop where
 /-- A rule is *balanced* if whenever two parties have the same number of votes, then the difference
 in the number of seats allocated to them is at most one. -/
 class IsBalanced (rule : Rule) : Prop where
-  balanced {n : ℕ} (election : Election n) (i j : Fin n) :
+  balanced {n : ℕ+} (election : Election n) (i j : Fin n) :
     election.votes[i] = election.votes[j] →
       ∀ App ∈ rule.res election, App[i].dist App[j] ≤ 1
 
 /-- A rule is *concordant* if whenever one party has fewer votes than another, then it is allocated
 no more seats than that other party. -/
 class IsConcordant (rule : Rule) : Prop where
-  concordant {n : ℕ} (election : Election n) (i j : Fin n) :
+  concordant {n : ℕ+} (election : Election n) (i j : Fin n) :
     election.votes[i] < election.votes[j] →
       ∀ App ∈ rule.res election, App[i] ≤ App[j]
 
 /-- A rule is *decent* if scaling the number of votes for each party by the same positive integer
 does not change the apportionment. -/
 class IsDecent (rule : Rule) : Prop where
-  decent {n : ℕ} (election : Election n) (k : ℕ+) :
+  decent {n : ℕ+} (election : Election n) (k : ℕ+) :
     let election' : Election n := election.mk_by_scale k
     rule.res election' = rule.res election
 
 /-- A rule is *weakly exact* if every `Apportionment`, when viewed as an input vote distribution
 `Election.votes`, is reproduced as the unique solution. -/
 class IsExact (rule : Rule) : Prop where
-  exact {n : ℕ} (election : Election n) :
+  exact {n : ℕ+} (election : Election n) :
     -- ∀ App ∈ rule.res election
     ∀ App : Apportionment n, (hApp : App ∈ rule.res election) →
       let election' : Election n := {
@@ -151,7 +151,7 @@ class IsExact (rule : Rule) : Prop where
 /-- A rule is a *quota rule* if the number of seats allocated to each party is either the floor or
 the ceiling of its Hare-quota. -/
 class IsQuotaRule (rule : Rule) : Prop where
-  quota_rule {n : ℕ} (election : Election n) (i : Fin n) :
+  quota_rule {n : ℕ+} (election : Election n) (i : Fin n) :
     let quota := (election.votes[i] * election.houseSize : ℚ) / election.votes.sum
     ∀ App ∈ rule.res election, App[i] = ⌊quota⌋ ∨ App[i] = ⌈quota⌉
 
@@ -159,7 +159,7 @@ class IsQuotaRule (rule : Rule) : Prop where
 A population paradox occurs when the support for party `i` increases at a faster rate than that for
 party `j`, but `i` loses seats while `j` gains seats. -/
 class IsPopulationMonotone (rule : Rule) : Prop where
-  population_monotone {n : ℕ} (election₁ election₂ : Election n) (i j : Fin n) :
+  population_monotone {n : ℕ+} (election₁ election₂ : Election n) (i j : Fin n) :
     election₁.houseSize = election₂.houseSize →
       -- i's support grows faster than j's (multiplying crosswise to avoid ℚ)
       election₂.votes[i] * election₁.votes[j] > election₂.votes[j] * election₁.votes[i] →
@@ -202,30 +202,34 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
   obtain ⟨App, h_App⟩ := rule.non_emptiness e
   have m2_le_2 : App[2] ≤ 2 := by
     have := h_quota.quota_rule e 2 App h_App
-    simp [e] at this
+    simp only [e] at this
+    change App[2] = ⌊(2450 * 8 : ℚ) / 10000⌋ ∨ App[2] = ⌈(2450 * 8 : ℚ) / 10000⌉ at this
     norm_num at this
     omega
   have m3_le_5 : App[3] ≤ 5 := by
     have := h_quota.quota_rule e 3 App h_App
-    simp [e] at this
+    simp only [e] at this
+    change App[3] = ⌊(6220 * 8 : ℚ) / 10000⌋ ∨ App[3] = ⌈(6220 * 8 : ℚ) / 10000⌉ at this
     norm_num at this
     omega
   have m1_eq_1 : App[1] = 1 := by
     have := h_quota.quota_rule e 1 App h_App
-    replace this : App[1] = 0 ∨ App[1] = 1 := by
-      simp [e] at this
-      norm_num at this
-      assumption
+    simp only [e] at this
+    change App[1] = ⌊(670 * 8 : ℚ) / 10000⌋ ∨ App[1] = ⌈(670 * 8 : ℚ) / 10000⌉ at this
+    norm_num at this
     rcases this with m1_eq_0 | m1_eq_1
     · have m0_eq_0 : App[0] = 0 := by
-        have : App[0] ≤ App[1] := by exact h_concord.concordant e 0 1 (by decide) App h_App
+        have : App[0] ≤ App[1] := h_concord.concordant e 0 1 (by decide) App h_App
         omega
       have : App.sum ≤ 7 := by
-        have : App.sum = App[0] + App[1] + App[2] + App[3] := by
+        have h_sum_eq : App.sum = App[0] + App[1] + App[2] + App[3] := by
           simp only [Vector.sum]
-          have h_array : App.toArray = #[App[0], App[1], App[2], App[3]] := by grind
+          have h_array : App.toArray = #[App[0], App[1], App[2], App[3]] := by
+            ext i
+            · simp
+            · rcases i with ( _ | _ | _ | _ | i ) <;> trivial
           exact h_array.symm ▸ by simp [add_assoc]
-        linarith only [this, m0_eq_0, m1_eq_0, m2_le_2, m3_le_5]
+        linarith only [h_sum_eq, m0_eq_0, m1_eq_0, m2_le_2, m3_le_5]
       have : App.sum = 8 := rule.house_size_feasibility e App h_App
       omega
     · assumption
@@ -240,15 +244,15 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
   obtain ⟨App', h_App'⟩ := rule.non_emptiness e'
   have m3_ge_6' : App'[3] ≥ 6 := by
     have := h_quota.quota_rule e' 3 App' h_App'
-    simp [e'] at this
+    simp only [e'] at this
+    change App'[3] = ⌊(6200 * 8 : ℚ) / 8255⌋ ∨ App'[3] = ⌈(6200 * 8 : ℚ) / 8255⌉ at this
     norm_num at this
     omega
   have m1_eq_0' : App'[1] = 0 := by
     have := h_quota.quota_rule e' 1 App' h_App'
-    replace this : App'[1] = 0 ∨ App'[1] = 1 := by
-      simp [e'] at this
-      norm_num at this
-      assumption
+    simp only [e'] at this
+    change App'[1] = ⌊(675 * 8 : ℚ) / 8255⌋ ∨ App'[1] = ⌈(675 * 8 : ℚ) / 8255⌉ at this
+    norm_num at this
     rcases this with m1_eq_0' | m1_eq_1'
     · assumption
     · have m0_ge_1' : App'[0] ≥ 1 := by
@@ -258,20 +262,19 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
         have : App'[1] ≤ App'[2] := h_concord.concordant e' 1 2 (by decide) App' h_App'
         omega
       have : App'.sum ≥ 9 := by
-        have : App'.sum = App'[0] + App'[1] + App'[2] + App'[3] := by
+        have h_sum_eq : App'.sum = App'[0] + App'[1] + App'[2] + App'[3] := by
           simp only [Vector.sum]
           have h_array : App'.toArray = #[App'[0], App'[1], App'[2], App'[3]] := by
             ext i
             · simp
             · rcases i with ( _ | _ | _ | _ | i ) <;> trivial
           exact h_array.symm ▸ by simp [add_assoc]
-        linarith only [this, m0_ge_1', m1_eq_1', m2_ge_1', m3_ge_6']
+        linarith only [h_sum_eq, m0_ge_1', m1_eq_1', m2_ge_1', m3_ge_6']
       have : App'.sum = 8 := rule.house_size_feasibility e' App' h_App'
       omega
   -- show that it's not population monotone --
-  replace h_mono := h_mono.population_monotone e e' 1 3 (by trivial) (by decide)
-    App h_App App' h_App'
-  have : App'[3] ≤ App[3] := by simp_all
+  replace h_mono : App'[1] < App[1] → App'[3] ≤ App[3] := by
+    simpa using (h_mono.population_monotone e e' 1 3 (by trivial) (by decide) App h_App App' h_App')
   omega
 
 end Apportionmentlib
