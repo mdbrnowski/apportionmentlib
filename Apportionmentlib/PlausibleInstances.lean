@@ -18,7 +18,7 @@ import Plausible
 
 open Apportionmentlib
 
-example {n : ℕ} (e : Election n) (h : 2 < n) : e.votes[0] > e.votes[1] := by
+example (e : Election 4) : e.votes[0] > e.votes[1] := by
   plausible
 
 #sample Election 2
@@ -34,24 +34,40 @@ instance {n : ℕ} : Shrinkable (Vector ℕ n) where
     (List.finRange n).flatMap fun (i : Fin n) =>
       (Shrinkable.shrink v[i]).map fun v' => v.set i v'
 
-instance {n : ℕ} : Shrinkable (Election n) where
+instance : Shrinkable ℕ+ where
+  shrink n := (Shrinkable.shrink n.val).filterMap fun m =>
+    if h : 0 < m then some ⟨m, h⟩ else none
+
+instance : Arbitrary ℕ+ where
+  arbitrary := do
+    let n ← Gen.choose Nat 1 ((← Gen.getSize) + 1) (by omega)
+    return ⟨n.val, by omega⟩
+
+instance {n : ℕ+} : Shrinkable (Election n) where
   shrink e :=
     let shrunkVotes := Shrinkable.shrink e.votes
     let shrunkHouseSizes := Shrinkable.shrink e.houseSize
     -- shrink votes only, shrink houseSize only, or shrink both
-    (shrunkVotes.map fun v => Election.mk v e.houseSize) ++
-    (shrunkHouseSizes.map fun h => Election.mk e.votes h) ++
-    (shrunkVotes.flatMap fun v => shrunkHouseSizes.map fun h => Election.mk v h)
+    (shrunkVotes.filterMap fun v =>
+      if h : 0 < v.sum then some ⟨v, e.houseSize, h⟩ else none) ++
+    (shrunkHouseSizes.map fun h => ⟨e.votes, h, e.votes_sum_pos⟩) ++
+    (shrunkVotes.flatMap fun v =>
+      if hv : 0 < v.sum then shrunkHouseSizes.map fun h => ⟨v, h, hv⟩ else [])
 
-instance {n : ℕ} : Arbitrary (Election n) where
+instance {n : ℕ+} : Arbitrary (Election n) where
   arbitrary := do
     let votes ← (Vector.replicate n ()).mapM fun _ => Gen.chooseNat
     let houseSize ← Gen.choose Nat 1 20 (by decide)
+    let i0 : Fin n := ⟨0, n.prop⟩
+    let votes' := votes.set i0 (votes[0] + 1)
     return {
-      votes := votes,
-      houseSize := houseSize
+      votes := votes',
+      houseSize := ⟨houseSize.val, houseSize.prop.left⟩,
+      votes_sum_pos := by
+        rw [sum_pos_iff_exists_pos]
+        exact ⟨i0, by simp [votes', i0]⟩
     }
 
-instance {n : ℕ} : SampleableExt (Election n) := SampleableExt.selfContained
+instance {n : ℕ+} : SampleableExt (Election n) := SampleableExt.selfContained
 
 end Apportionmentlib
