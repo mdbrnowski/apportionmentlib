@@ -7,6 +7,13 @@ import Mathlib.Algebra.Order.BigOperators.Group.List
 import Mathlib.Data.Nat.Basic
 import Mathlib.Tactic
 
+/-!
+# Utils
+
+Utility lemmas for Apportionmentlib.
+-/
+
+/-- A vector of natural numbers has positive sum iff at least one component is positive. -/
 lemma sum_pos_iff_exists_pos {n : ℕ} {v : Vector ℕ n} : 0 < v.sum ↔ ∃ i : Fin n, 0 < v[i] := by
   constructor
   · contrapose!

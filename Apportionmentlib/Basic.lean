@@ -67,6 +67,8 @@ instance {n : ℕ} : Repr (Election n) where
   reprPrec e _ :=
     "{ votes := " ++ repr e.votes.toArray ++ ", houseSize := " ++ repr e.houseSize ++ " }"
 
+/-- Create a new election by permuting the vote distribution of parties according to permutation
+`σ`. -/
 @[simp]
 def Election.mk_by_perm {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) : Election n :=
   { votes := Vector.ofFn fun i => election.votes[σ i]
@@ -79,6 +81,7 @@ def Election.mk_by_perm {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin 
       simpa
   }
 
+/-- Create a new election by scaling all votes by a positive constant `k`. -/
 @[simp]
 def Election.mk_by_scale {n : ℕ} (election : Election n) (k : ℕ+) : Election n :=
   { votes := Vector.ofFn fun i => k * election.votes[i]
