@@ -36,7 +36,7 @@ between weak and strong exactness is added, following [PalomaresPukelsheimRamire
 
 ## Main statements
 
-* `Election.num_parties_pos`: the number of parties in an election is positive.
+* `Election.n_pos`: the number of parties in an election is positive.
 * `IsConcordant_of_IsPopulationMonotone`: anonymity and population monotonicity imply concordance.
 * `balinski_young`: Balinski-Young impossibility theorem.
 
@@ -92,12 +92,12 @@ def Election.mk_by_scale {n : ℕ} (election : Election n) (k : ℕ+) : Election
   }
 
 /-- The number of parties in an election is positive. -/
-theorem Election.num_parties_pos {n : ℕ} (election : Election n) : 0 < n := by
+theorem Election.n_pos {n : ℕ} (election : Election n) : 0 < n := by
   by_contra h_neg
   have h_sum_zero : (Vector.sum election.votes) = 0 := by
     have h_empty : ∀ (v : Vector ℕ 0), v.sum = 0 := by decide
     aesop
-  exact absurd h_sum_zero (by exact ne_of_gt election.votes_sum_pos)
+  exact absurd h_sum_zero (ne_of_gt election.votes_sum_pos)
 
 /-- An apportionment is a vector of natural numbers representing the number of seats allocated to
 each party (at the corresponding index). -/
