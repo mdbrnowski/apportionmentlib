@@ -6,7 +6,6 @@ Authors: Michał Dobranowski
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Nat.Dist
-import Mathlib.Data.Rat.Init
 import Mathlib.Data.Rat.Floor
 import Mathlib.Tactic
 import Apportionmentlib.Utils
@@ -92,7 +91,7 @@ def Election.mk_by_scale {n : ℕ} (election : Election n) (k : ℕ+) : Election
   }
 
 /-- The number of parties in an election is positive. -/
-theorem Election.n_pos {n : ℕ} (election : Election n) : 0 < n := by
+lemma Election.n_pos {n : ℕ} (election : Election n) : 0 < n := by
   by_contra h_neg
   have h_sum_zero : (Vector.sum election.votes) = 0 := by
     have h_empty : ∀ (v : Vector ℕ 0), v.sum = 0 := by decide

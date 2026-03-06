@@ -43,7 +43,7 @@ instance : Arbitrary ℕ+ where
     let n ← Gen.choose Nat 1 ((← Gen.getSize) + 1) (by omega)
     return ⟨n.val, by omega⟩
 
-instance {n : ℕ+} : Shrinkable (Election n) where
+instance {n : ℕ} : Shrinkable (Election n) where
   shrink e :=
     let shrunkVotes := Shrinkable.shrink e.votes
     let shrunkHouseSizes := Shrinkable.shrink e.houseSize
@@ -54,20 +54,20 @@ instance {n : ℕ+} : Shrinkable (Election n) where
     (shrunkVotes.flatMap fun v =>
       if hv : 0 < v.sum then shrunkHouseSizes.map fun h => ⟨v, h, hv⟩ else [])
 
-instance {n : ℕ+} : Arbitrary (Election n) where
+instance {n : ℕ} [NeZero n] : Arbitrary (Election n) where
   arbitrary := do
     let votes ← (Vector.replicate n ()).mapM fun _ => Gen.chooseNat
     let houseSize ← Gen.choose Nat 1 20 (by decide)
-    let i0 : Fin n := ⟨0, n.prop⟩
-    let votes' := votes.set i0 (votes[0] + 1)
+    have n_pos := NeZero.pos n
+    let votes' := votes.set 0 (votes[0] + 1)
     return {
       votes := votes',
       houseSize := ⟨houseSize.val, houseSize.prop.left⟩,
       votes_sum_pos := by
         rw [sum_pos_iff_exists_pos]
-        exact ⟨i0, by simp [votes', i0]⟩
+        exact ⟨0, by simp [votes']⟩
     }
 
-instance {n : ℕ+} : SampleableExt (Election n) := SampleableExt.selfContained
+instance {n : ℕ} [NeZero n] : SampleableExt (Election n) := SampleableExt.selfContained
 
 end Apportionmentlib
