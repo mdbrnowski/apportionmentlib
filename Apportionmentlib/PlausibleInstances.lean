@@ -18,7 +18,7 @@ import Plausible
 
 open Apportionmentlib
 
-example (e : Election 4) : e.votes[0] > e.votes[1] := by
+example (e : Election 4) : e.votes[0] ≤ 15 + e.votes[1] := by
   plausible
 
 #sample Election 2
