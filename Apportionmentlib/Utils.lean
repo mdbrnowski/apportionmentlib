@@ -33,3 +33,9 @@ lemma sum_pos_iff_exists_pos {n : ℕ} {v : Vector ℕ n} : 0 < v.sum ↔ ∃ i 
       rw [←Array.sum_eq_sum_toList]
       exact List.le_sum_of_mem (by simp)
     omega
+
+/-- The sum of a length-4 vector equals the sum of its components. -/
+lemma Vector.sum_four (v : Vector ℕ 4) : v.sum = v[0] + v[1] + v[2] + v[3] := by
+  have : v.toArray = #[v[0], v[1], v[2], v[3]] := by grind
+  simp [Vector.sum, this, Array.sum]
+  abel

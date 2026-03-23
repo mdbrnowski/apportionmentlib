@@ -226,24 +226,11 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     simp only [e] at this
     norm_num at this
     rcases this with m1_eq_0 | m1_eq_1
-    · have m0_eq_0 : App[0] = 0 := by
-        have : App[0] ≤ App[1] := h_concord.concordant e 0 1 (by decide) App h_App
-        omega
-      have : App.sum ≤ 7 := by
-        have h_sum_eq : App.sum = App[0] + App[1] + App[2] + App[3] := by
-          simp only [Vector.sum]
-          have h_array : App.toArray = #[App[0], App[1], App[2], App[3]] := by
-            ext i
-            · simp
-            · rcases i with ( _ | _ | _ | _ | i ) <;> trivial
-          exact h_array.symm ▸ by simp [add_assoc]
-        linarith only [h_sum_eq, m0_eq_0, m1_eq_0, m2_le_2, m3_le_5]
-      have : App.sum = 8 := rule.house_size_feasibility e App h_App
-      omega
+    · have h_sum : App.sum = 8 := rule.house_size_feasibility e App h_App
+      have : App[0] ≤ App[1] := h_concord.concordant e 0 1 (by decide) App h_App
+      linarith [Vector.sum_four App]
     · assumption
   -- second election --
-  -- We give an even stronger counterexample than needed: not only does B's support increase at a
-  -- faster rate than D's, but D's support decreases while B's support increases.
   let e' : Election 4 := {
     votes := #v[680, 675, 700, 6200]
     houseSize := 8,
@@ -261,26 +248,13 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
     norm_num at this
     rcases this with m1_eq_0' | m1_eq_1'
     · assumption
-    · have m0_ge_1' : App'[0] ≥ 1 := by
-        have : App'[1] ≤ App'[0] := h_concord.concordant e' 1 0 (by decide) App' h_App'
-        omega
-      have m2_ge_1' : App'[2] ≥ 1 := by
-        have : App'[1] ≤ App'[2] := h_concord.concordant e' 1 2 (by decide) App' h_App'
-        omega
-      have : App'.sum ≥ 9 := by
-        have h_sum_eq : App'.sum = App'[0] + App'[1] + App'[2] + App'[3] := by
-          simp only [Vector.sum]
-          have h_array : App'.toArray = #[App'[0], App'[1], App'[2], App'[3]] := by
-            ext i
-            · simp
-            · rcases i with ( _ | _ | _ | _ | i ) <;> trivial
-          exact h_array.symm ▸ by simp [add_assoc]
-        linarith only [h_sum_eq, m0_ge_1', m1_eq_1', m2_ge_1', m3_ge_6']
-      have : App'.sum = 8 := rule.house_size_feasibility e' App' h_App'
-      omega
+    · have h_sum' : App'.sum = 8 := rule.house_size_feasibility e' App' h_App'
+      have : App'[1] ≤ App'[0] := h_concord.concordant e' 1 0 (by decide) App' h_App'
+      have : App'[1] ≤ App'[2] := h_concord.concordant e' 1 2 (by decide) App' h_App'
+      linarith [Vector.sum_four App']
   -- show that it's not population monotone --
-  replace h_mono : App'[1] < App[1] → App'[3] ≤ App[3] := by
-    simpa using (h_mono.population_monotone e e' 1 3 (by trivial) (by decide) App h_App App' h_App')
-  omega
+  have : App[1] > App'[1] ∧ App[3] < App'[3] := by omega
+  have := h_mono.population_monotone e e' 1 3 (by decide) (by decide) App h_App App' h_App'
+  contradiction
 
 end Apportionmentlib
