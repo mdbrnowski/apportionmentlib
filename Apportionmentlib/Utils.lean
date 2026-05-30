@@ -21,7 +21,7 @@ lemma sum_pos_iff_exists_pos {n : ℕ} {v : Vector ℕ n} : 0 < v.sum ↔ ∃ i 
     have h_zero (i : Fin n) := nonpos_iff_eq_zero.mp (h_nonpos i)
     rw [nonpos_iff_eq_zero]
     unfold Vector.sum
-    rw [←Array.sum_eq_sum_toList]
+    rw [←Array.sum_toList]
     apply List.sum_eq_zero_iff.mpr
     intro x hx
     obtain ⟨i, hi⟩ : ∃ i : Fin n, x = v[i] := by
@@ -30,7 +30,7 @@ lemma sum_pos_iff_exists_pos {n : ℕ} {v : Vector ℕ n} : 0 < v.sum ↔ ∃ i 
   · intro ⟨i, hi⟩
     have h_sum_pos : v.sum ≥ v[i] := by
       unfold Vector.sum
-      rw [←Array.sum_eq_sum_toList]
+      rw [←Array.sum_toList]
       exact List.le_sum_of_mem (by simp)
     omega
 
