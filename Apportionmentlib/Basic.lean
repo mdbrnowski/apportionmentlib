@@ -102,6 +102,9 @@ lemma Election.n_pos {n : ℕ} (election : Election n) : 0 < n := by
 each party (at the corresponding index). -/
 abbrev Apportionment (n : ℕ) : Type := Vector ℕ n
 
+instance {n : ℕ} : Repr (Apportionment n) where
+  reprPrec e _ := repr e.toArray
+
 /-- An apportionment rule is a function that, given an election, returns a set of apportionments
 satisfying three properties:
 1. *Non-emptiness*: there is at least one apportionment returned;
