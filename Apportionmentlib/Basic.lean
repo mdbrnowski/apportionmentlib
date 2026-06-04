@@ -63,7 +63,11 @@ structure Election (n : ℕ) where
 
 instance {n : ℕ} : Repr (Election n) where
   reprPrec e _ :=
-    "{ votes := " ++ repr e.votes.toArray ++ ", houseSize := " ++ repr e.houseSize ++ " }"
+    "[" ++ repr e.houseSize ++ "; " ++ repr e.votes.toList ++ "]"
+    -- "{ votes := " ++ repr e.votes.toArray ++ ", houseSize := " ++ repr e.houseSize ++ " }"
+
+macro "election![" seats:term ";" "[" votes:term,* "]" "]" : term =>
+  `(Apportionmentlib.Election.mk #v[$votes,*] $seats (by decide))
 
 /-- Create a new election by permuting the vote distribution of parties according to permutation
 `σ`. -/
@@ -102,7 +106,7 @@ each party (at the corresponding index). -/
 abbrev Apportionment (n : ℕ) : Type := Vector ℕ n
 
 instance {n : ℕ} : Repr (Apportionment n) where
-  reprPrec e _ := repr e.toArray
+  reprPrec e _ := "#v" ++ repr e.toList
 
 /-- An apportionment rule is a function that, given an election, returns a set of apportionments
 satisfying three properties:
@@ -207,11 +211,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
   by_contra h_mono
   have h_concord := IsConcordant_of_IsPopulationMonotone rule
   -- first election --
-  let e : Election 4 := {
-    votes := #v[660, 670, 2450, 6220]
-    houseSize := 8
-    votes_sum_pos := by decide
-  }
+  let e := election![8; [660, 670, 2450, 6220]]
   obtain ⟨App, h_App⟩ := rule.non_emptiness e
   have m2_le_2 : App[2] ≤ 2 := by
     have := h_quota.quota_rule e 2 App h_App
@@ -233,11 +233,7 @@ theorem balinski_young (rule : Rule) [IsAnonymous rule] [h_quota : IsQuotaRule r
       linarith [Vector.sum_four App]
     · assumption
   -- second election --
-  let e' : Election 4 := {
-    votes := #v[680, 675, 700, 6200]
-    houseSize := 8,
-    votes_sum_pos := by decide
-  }
+  let e' := election![8; [680, 675, 700, 6200]]
   obtain ⟨App', h_App'⟩ := rule.non_emptiness e'
   have m3_ge_6' : App'[3] ≥ 6 := by
     have := h_quota.quota_rule e' 3 App' h_App'
