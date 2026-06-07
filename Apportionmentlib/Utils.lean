@@ -10,8 +10,22 @@ import Mathlib.Tactic
 /-!
 # Utils
 
-Utility lemmas for Apportionmentlib.
+Utility functions and lemmas for Apportionmentlib.
 -/
+
+private def padLeft (s : String) (n : Nat) (c : Char) : String :=
+  let padLen := n - s.length
+  if padLen > 0 then ("".pushn c padLen) ++ s else s
+
+/-- Formats a rational number to four decimal places. -/
+def formatRat4 (r : Rat) : String :=
+  let scaled := (r * 10000).floor
+  let sign := if scaled < 0 then "-" else ""
+  let absVal := scaled.natAbs
+  let intPart := absVal / 10000
+  let fracPart := absVal % 10000
+  let fracStr := padLeft (toString fracPart) 4 '0'
+  s!"{sign}{intPart}.{fracStr}"
 
 /-- A vector of natural numbers has positive sum iff at least one component is positive. -/
 lemma sum_pos_iff_exists_pos {n : ℕ} {v : Vector ℕ n} : 0 < v.sum ↔ ∃ i : Fin n, 0 < v[i] := by
