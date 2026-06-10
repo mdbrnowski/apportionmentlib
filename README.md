@@ -8,6 +8,9 @@ An attempt to formalize apportionment theory, a part of social choice theory, in
 | statement | progress |
 |---|---|
 | Balinski–Young impossibility theorem | ✅ done |
-| divisor methods are in fact methods (ABCDE properties) | 🏗️ in progress |
-| largest remainder methods are in fact methods (ABCDE properties) | 🏗️ in progress |
+| generalized Balinski–Young theorem (without anonymity) ([#7](https://github.com/mdbrnowski/apportionmentlib/issues/7)) | 🏗️ in progress |
+| D'Hondt method is a rule | 🏗️ in progress |
+| D'Hondt method is a method (ABCDE properties) | |
+| largest remainder method is a rule | |
+| largest remainder method is a method (ABCDE properties) | |
 | coherence theorem(s) | |
