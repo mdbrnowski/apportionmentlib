@@ -134,11 +134,11 @@ def Election.mk_by_scale {n : ℕ} (election : Election n) (k : ℕ+) : Election
 
 /-- The number of parties in an election is positive. -/
 lemma Election.n_pos {n : ℕ} (election : Election n) : 0 < n := by
-  by_contra h_neg
-  have h_sum_zero : (Vector.sum election.votes) = 0 := by
-    have h_empty : ∀ (v : Vector ℕ 0), v.sum = 0 := by decide
-    aesop
-  exact absurd h_sum_zero (ne_of_gt election.votes_sum_pos)
+  have : n ≠ 0 := by
+    by_contra hn
+    rw [hn] at election
+    simpa [Vector.eq_empty] using election.votes_sum_pos
+  exact Nat.pos_of_ne_zero this
 
 /-- An apportionment is a vector of natural numbers representing the number of seats allocated to
 each party (at the corresponding index). -/
