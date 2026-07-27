@@ -37,12 +37,14 @@ between weak and strong exactness is added, following [PalomaresPukelsheimRamire
 
 * `Election.n_pos`: the number of parties in an election is positive.
 * `IsConcordant_of_IsPopulationMonotone`: anonymity and population monotonicity imply concordance.
-* `balinski_young`: Balinski-Young impossibility theorem.
+* `balinski_young`: Balinski-Young impossibility theorem, without any anonymity assumption.
 
 ## References
 
 * [M. L. Balinski, H. P. Young, *Fair Representation: Meeting the Ideal of One Man, One Vote*
   ][BalinskiYoung1982]
+* [P. Gölz, D. Peters, A. D. Procaccia, *In This Apportionment Lottery, the House Always Wins*
+  ][GoelzPetersProcaccia2025]
 * [A. Palomares, F. Pukelsheim, J. A. Ramírez, *The whole and its parts: On the coherence theorem of
   Balinski and Young*][PalomaresPukelsheimRamirez2016]
 * [F. Pukelsheim, *Proportional Representation: Apportionment Methods and Their Applications*
