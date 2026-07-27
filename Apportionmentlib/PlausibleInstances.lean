@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michał Dobranowski
 -/
 import Plausible.Arbitrary
+import Mathlib.Testing.Plausible.Sampleable
 import Apportionmentlib.Basic
 
 /-!
@@ -33,15 +34,6 @@ instance {n : ℕ} : Shrinkable (Vector ℕ n) where
   shrink v :=
     (List.finRange n).flatMap fun (i : Fin n) =>
       (Shrinkable.shrink v[i]).map fun v' => v.set i v'
-
-instance : Shrinkable ℕ+ where
-  shrink n := (Shrinkable.shrink n.val).filterMap fun m =>
-    if h : 0 < m then some ⟨m, h⟩ else none
-
-instance : Arbitrary ℕ+ where
-  arbitrary := do
-    let n ← Gen.choose Nat 1 ((← Gen.getSize) + 1) (by omega)
-    return ⟨n.val, by omega⟩
 
 instance {n : ℕ} : Shrinkable (Election n) where
   shrink e :=
