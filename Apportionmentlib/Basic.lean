@@ -55,11 +55,14 @@ open Lean (Json)
 
 namespace Apportionmentlib
 
-/-- An election with a vector of votes for `n` parties (at the corresponding indices) and the total
-number of seats to be allocated. -/
+/-- An election with a vector of votes for `n` parties and the total number of seats to be
+allocated. -/
 structure Election (n : ℕ) where
+  /-- The number of votes cast for each of the `n` parties, at the corresponding index. -/
   votes : Vector ℕ n
+  /-- The number of seats to be allocated between the parties. -/
   houseSize : ℕ+
+  /-- At least one vote is cast, so that the standard quotas are well defined. -/
   votes_sum_pos : 0 < votes.sum
   deriving DecidableEq
 
@@ -67,6 +70,8 @@ instance {n : ℕ} : Repr (Election n) where
   reprPrec e _ :=
     "[" ++ repr e.houseSize ++ "; " ++ repr e.votes.toList ++ "]"
 
+/-- Notation for an election with a literal house size and vote distribution, as in
+`election![8; [66, 67, 245, 622]]`. -/
 macro "election![" seats:term ";" "[" votes:term,* "]" "]" : term =>
   `(Apportionmentlib.Election.mk #v[$votes,*] $seats (by decide))
 
@@ -111,7 +116,7 @@ instance {n : ℕ} : HtmlEval (Election n) where
 /-- Create a new election by permuting the vote distribution of parties according to permutation
 `σ`. -/
 @[simp]
-def Election.mk_by_perm {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) : Election n :=
+def Election.mkByPerm {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) : Election n :=
   { votes := Vector.ofFn fun i => election.votes[σ i]
     houseSize := election.houseSize
     votes_sum_pos := by
@@ -124,7 +129,7 @@ def Election.mk_by_perm {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin 
 
 /-- Create a new election by scaling all votes by a positive constant `k`. -/
 @[simp]
-def Election.mk_by_scale {n : ℕ} (election : Election n) (k : ℕ+) : Election n :=
+def Election.mkByScale {n : ℕ} (election : Election n) (k : ℕ+) : Election n :=
   { votes := Vector.ofFn fun i => k * election.votes[i]
     houseSize := election.houseSize
     votes_sum_pos := by
@@ -164,7 +169,7 @@ structure Rule where
 the same way. -/
 class IsAnonymous (rule : Rule) : Prop where
   anonymous {n : ℕ} (election : Election n) (σ : Equiv.Perm (Fin n)) :
-    let election' : Election n := election.mk_by_perm σ
+    let election' : Election n := election.mkByPerm σ
     ∀ App, App ∈ rule.res election' ↔
       ∃ App' ∈ rule.res election, ∀ i, App[i] = App'[σ i]
 
@@ -186,7 +191,7 @@ class IsConcordant (rule : Rule) : Prop where
 does not change the apportionment. -/
 class IsDecent (rule : Rule) : Prop where
   decent {n : ℕ} (election : Election n) (k : ℕ+) :
-    let election' : Election n := election.mk_by_scale k
+    let election' : Election n := election.mkByScale k
     rule.res election' = rule.res election
 
 /-- A rule is *weakly exact* if every `Apportionment`, when viewed as an input vote distribution
@@ -229,7 +234,7 @@ lemma IsConcordant_of_IsPopulationMonotone (rule : Rule) [h_anon : IsAnonymous r
   constructor
   intro n e i j h_votes App h_App
   let σ : Equiv.Perm (Fin n) := Equiv.swap i j
-  let e' : Election n := e.mk_by_perm σ
+  let e' : Election n := e.mkByPerm σ
   let App' := Vector.ofFn fun r => App[σ r]
   replace h_anon := h_anon.anonymous e σ App'
   have h_App' : App' ∈ rule.res e' := by
