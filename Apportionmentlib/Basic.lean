@@ -278,6 +278,10 @@ lemma IsConcordant_of_IsPopulationMonotone (rule : Rule) [h_anon : IsAnonymous r
 -- with four parties and twelve seats, in two regimes. Without anonymity the symmetric second case
 section BalinskiYoung
 
+-- The proof writes `App[0]`, ..., `App[3]` hundreds of times; discharging each index bound with
+-- `decide` instead of the default tactic is way faster.
+local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| decide)
+
 variable (rule : Rule) {a b c : ℕ} {App : Apportionment 4}
 
 /-- A *large* election: party `0` holds 72 of the 96 votes, the other three sharing `a + b + c = 24`
