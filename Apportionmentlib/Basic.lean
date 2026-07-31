@@ -23,6 +23,7 @@ between weak and strong exactness is added, following [PalomaresPukelsheimRamire
 ## Main definitions
 
 * `Election`
+* `Election.quota`
 * `Apportionment`
 * `Rule`
 * `IsAnonymous`
@@ -77,6 +78,10 @@ instance {n : ℕ} : Repr (Election n) where
 macro "election![" seats:term ";" "[" votes:term,* "]" "]" : term =>
   `(Apportionmentlib.Election.mk #v[$votes,*] $seats (by decide))
 
+/-- Party `i`'s standard (Hare) quota: its proportional share of the house size. -/
+def Election.quota {n : ℕ} (e : Election n) (i : Fin n) : ℚ :=
+  (e.votes[i] * e.houseSize : ℚ) / e.votes.sum
+
 private def Election.toHtml {n : ℕ} (e : Election n) : Html :=
   let indices := List.range n
   let votesList := e.votes.toList
@@ -103,7 +108,7 @@ private def Election.toHtml {n : ℕ} (e : Election n) : Html :=
   let row2 := Html.element "tr" #[] <|
     ([th "votes"] ++ votesList.map (fun v => td (toString v)) ++ [td s!"{total}"]).toArray
   let row3 := Html.element "tr" #[] <|
-    ([th "quota"] ++ votesList.map (fun v => td (formatRat4 ((v : ℚ) / total * houseSize))) ++
+    ([th "quota"] ++ (List.finRange n).map (fun i => td (formatRat4 (e.quota i))) ++
      [td s!"{houseSize.val}"]).toArray
   Html.element "table" #[("style", tableStyle)] #[Html.element "tbody" #[] #[row1, row2, row3]]
 
@@ -215,8 +220,27 @@ class IsExact (rule : Rule) : Prop where
 the ceiling of its Hare-quota. -/
 class IsQuotaRule (rule : Rule) : Prop where
   quota_rule {n : ℕ} (election : Election n) (i : Fin n) :
-    let quota := (election.votes[i] * election.houseSize : ℚ) / election.votes.sum
-    ∀ App ∈ rule.res election, App[i] = ⌊quota⌋ ∨ App[i] = ⌈quota⌉
+    ∀ App ∈ rule.res election, App[i] = ⌊election.quota i⌋ ∨ App[i] = ⌈election.quota i⌉
+
+/-- A quota rule allocates at most `m` seats to party `i` whenever its quota is at most `m`. -/
+lemma Rule.seats_le (rule : Rule) [h_quota : IsQuotaRule rule] {n : ℕ} (election : Election n)
+    (i : Fin n) (m : ℕ) (h : election.quota i ≤ m) :
+    ∀ App ∈ rule.res election, App[i] ≤ m := by
+  intro App h_App
+  have h_quota := h_quota.quota_rule election i App h_App
+  have h_ceil : ⌈election.quota i⌉ ≤ m := Int.ceil_le.mpr h
+  have h_floor := Int.floor_le_ceil (election.quota i)
+  rcases h_quota <;> omega
+
+/-- A quota rule allocates at least `m` seats to party `i` whenever its quota is at least `m`. -/
+lemma Rule.le_seats (rule : Rule) [h_quota : IsQuotaRule rule] {n : ℕ} (election : Election n)
+    (i : Fin n) (m : ℕ) (h : (m : ℚ) ≤ election.quota i) :
+    ∀ App ∈ rule.res election, m ≤ App[i] := by
+  intro App h_App
+  have h_quota := h_quota.quota_rule election i App h_App
+  have h_floor : m ≤ ⌊election.quota i⌋ := Int.le_floor.mpr h
+  have h_ceil := Int.floor_le_ceil (election.quota i)
+  rcases h_quota <;> omega
 
 /-- A rule is *population monotone* (or *vote ratio monotone*) if population paradoxes do not occur.
 A population paradox occurs when the support for party `i` increases at a faster rate than that for
@@ -246,7 +270,7 @@ lemma IsConcordant_of_IsPopulationMonotone (rule : Rule) [h_anon : IsAnonymous r
   have h_p' : e'.votes[i] = e.votes[j] := by aesop
   have h_q' : e'.votes[j] = e.votes[i] := by aesop
   replace h_mono := h_mono.population_monotone e e' i j (by trivial)
-  rw [h_p', h_q', ←pow_two, ←pow_two] at h_mono
+  rw [h_p', h_q', ← pow_two, ← pow_two] at h_mono
   specialize h_mono (Nat.pow_lt_pow_left h_votes (by decide)) App h_App App' h_App'
   aesop
 
