@@ -30,7 +30,7 @@ open Plausible
 
 namespace Apportionmentlib
 
-instance {n : ℕ} : Shrinkable (Vector ℕ n) where
+instance instShrinkableVectorNat {n : ℕ} : Shrinkable (Vector ℕ n) where
   shrink v :=
     (List.finRange n).flatMap fun (i : Fin n) =>
       (Shrinkable.shrink v[i]).map fun v' => v.set i v'

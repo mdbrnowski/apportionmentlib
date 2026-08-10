@@ -165,6 +165,7 @@ satisfying three properties:
 2. *Inheritance of zeros*: parties with zero votes are allocated zero seats;
 3. *House size feasibility*: the total number of seats allocated is equal to the house size. -/
 structure Rule where
+  /-- The set of apportionments that the rule returns for a given election. -/
   res : {n : ℕ} → Election n → Finset (Apportionment n)
   non_emptiness {n : ℕ} (election : Election n) : (res election).Nonempty
   inheritance_of_zeros {n : ℕ} (election : Election n) (i : Fin n) :
