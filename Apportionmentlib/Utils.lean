@@ -3,15 +3,19 @@ Copyright (c) 2026 Michał Dobranowski. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michał Dobranowski
 -/
-import Mathlib.Algebra.Order.BigOperators.Group.List
-import Mathlib.Data.Nat.Basic
-import Mathlib.Tactic
+module
+
+public import Mathlib.Algebra.Order.BigOperators.Group.List
+public import Mathlib.Data.Nat.Basic
+public import Mathlib.Tactic
 
 /-!
 # Utils
 
 Utility functions and lemmas for Apportionmentlib.
 -/
+
+public section
 
 private def padLeft (s : String) (n : Nat) (c : Char) : String :=
   let padLen := n - s.length

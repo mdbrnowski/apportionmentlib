@@ -3,9 +3,14 @@ Copyright (c) 2025 Michał Dobranowski. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michał Dobranowski
 -/
-import Plausible.Arbitrary
-import Mathlib.Testing.Plausible.Sampleable
-import Apportionmentlib.Basic
+module
+
+public meta import Plausible.Arbitrary
+public meta import Mathlib.Testing.Plausible.Sampleable
+public meta import Apportionmentlib.Basic
+public import Plausible.Arbitrary
+public import Mathlib.Testing.Plausible.Sampleable
+public import Apportionmentlib.Basic
 
 /-!
 # Instances for Plausible
@@ -26,16 +31,18 @@ example (e : Election 4) : e.votes[0] ≤ 15 + e.votes[1] := by
 ```
 -/
 
+public section
+
 open Plausible
 
 namespace Apportionmentlib
 
-instance instShrinkableVectorNat {n : ℕ} : Shrinkable (Vector ℕ n) where
+meta instance instShrinkableVectorNat {n : ℕ} : Shrinkable (Vector ℕ n) where
   shrink v :=
     (List.finRange n).flatMap fun (i : Fin n) =>
       (Shrinkable.shrink v[i]).map fun v' => v.set i v'
 
-instance {n : ℕ} : Shrinkable (Election n) where
+meta instance {n : ℕ} : Shrinkable (Election n) where
   shrink e :=
     let shrunkVotes := Shrinkable.shrink e.votes
     let shrunkHouseSizes := Shrinkable.shrink e.houseSize
@@ -46,7 +53,7 @@ instance {n : ℕ} : Shrinkable (Election n) where
     (shrunkVotes.flatMap fun v =>
       if hv : 0 < v.sum then shrunkHouseSizes.map fun h => ⟨v, h, hv⟩ else [])
 
-instance {n : ℕ} [NeZero n] : Arbitrary (Election n) where
+meta instance {n : ℕ} [NeZero n] : Arbitrary (Election n) where
   arbitrary := do
     let votes ← (Vector.replicate n ()).mapM fun _ => Gen.chooseNat
     let houseSize ← Gen.choose Nat 1 20 (by decide)
@@ -60,6 +67,6 @@ instance {n : ℕ} [NeZero n] : Arbitrary (Election n) where
         exact ⟨0, by simp [votes']⟩
     }
 
-instance {n : ℕ} [NeZero n] : SampleableExt (Election n) := SampleableExt.selfContained
+meta instance {n : ℕ} [NeZero n] : SampleableExt (Election n) := SampleableExt.selfContained
 
 end Apportionmentlib
